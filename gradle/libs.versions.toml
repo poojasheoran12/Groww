@@ -6,13 +6,13 @@ junitVersion = "1.2.1"
 espressoCore = "3.6.1"
 lifecycleRuntimeKtx = "2.8.6"
 activityCompose = "1.9.3"
-kotlin = "2.0.21"
-composeBom = "2026.02.01"
+kotlin = "2.0.20"
+composeBom = "2024.10.00"
 hilt = "2.51.1"
 room = "2.6.1"
 retrofit = "2.11.0"
 kotlinSerialization = "1.6.3"
-navigationCompose = "2.7.7"
+navigationCompose = "2.8.2"
 okhttp = "4.12.0"
 coil = "2.6.0"
 vico = "1.14.0"
@@ -33,6 +33,7 @@ androidx-compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-toolin
 androidx-compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
 androidx-compose-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
 androidx-compose-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
+androidx-compose-runtime = { group = "androidx.compose.runtime", name = "runtime" }
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3" }
 
 # Navigation
@@ -69,6 +70,7 @@ lottie-compose = { group = "com.airbnb.android", name = "lottie-compose", versio
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
+kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
 kotlin-kapt = { id = "org.jetbrains.kotlin.kapt", version.ref = "kotlin" }

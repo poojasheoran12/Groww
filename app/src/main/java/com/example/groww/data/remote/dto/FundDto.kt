@@ -9,10 +9,3 @@ data class FundDto(
     val schemeName: String
 )
 
-fun FundDto.toDomain(category: String? = null): Fund {
-    return Fund(
-        schemeCode = this.schemeCode,
-        schemeName = this.schemeName,
-        category = category
-    )
-}
