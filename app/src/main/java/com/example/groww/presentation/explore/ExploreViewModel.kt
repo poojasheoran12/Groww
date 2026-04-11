@@ -2,66 +2,87 @@ package com.example.groww.presentation.explore
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.groww.domain.model.Fund
-import com.example.groww.domain.repository.FundRepository
-import com.example.groww.util.Resource
+import com.example.groww.domain.model.FundWithNav
+import com.example.groww.domain.usecase.GetCategoryFundsUseCase
+import com.example.groww.domain.usecase.GetFundDetailsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+sealed class ExploreUiState {
+    object Loading : ExploreUiState()
+    data class Success(val categories: Map<String, List<FundWithNav>>) : ExploreUiState()
+    data class Error(val message: String) : ExploreUiState()
+    object Empty : ExploreUiState()
+}
+
 @HiltViewModel
 class ExploreViewModel @Inject constructor(
-    private val repository: FundRepository
+    private val getCategoryFundsUseCase: GetCategoryFundsUseCase,
+    private val getFundDetailsUseCase: GetFundDetailsUseCase
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow<Resource<Map<String, List<Fund>>>>(Resource.Loading)
-    val uiState = _uiState.asStateFlow()
+    private val categories = listOf(
+        "Index Funds",
+        "Bluechip Funds",
+        "Tax Saver (ELSS)",
+        "Large Cap Funds"
+    )
 
-    private var cachedData: Map<String, List<Fund>>? = null
+    private val _uiState = MutableStateFlow<ExploreUiState>(ExploreUiState.Loading)
+    val uiState: StateFlow<ExploreUiState> = _uiState.asStateFlow()
+
+    // Internal cache for NAV values as requested
+    private val navCache = mutableMapOf<Int, String>()
 
     init {
-        fetchExploreData()
+        loadExploreData()
     }
 
-    fun fetchExploreData() {
-        if (cachedData != null) {
-            _uiState.value = Resource.Success(cachedData!!)
-            return
-        }
-
+    fun loadExploreData() {
         viewModelScope.launch {
-            _uiState.value = Resource.Loading
+            _uiState.value = ExploreUiState.Loading
             try {
-                // Parrallel API Calls for 4 categories
-                val indexDef = async { repository.searchFunds("index") }
-                val bluechipDef = async { repository.searchFunds("bluechip") }
-                val taxDef = async { repository.searchFunds("tax") }
-                val largeDef = async { repository.searchFunds("large") }
+                val discoveryData = coroutineScope {
+                    categories.map { category ->
+                        async {
+                            val fundsResult = getCategoryFundsUseCase(category)
+                            val funds = fundsResult.getOrNull()?.take(4) ?: emptyList()
+                            
+                            // Fetch NAV for these 4 funds in parallel
+                            val fundsWithNav = funds.map { fund ->
+                                async {
+                                    val cachedNav = navCache[fund.schemeCode]
+                                    if (cachedNav != null) {
+                                        FundWithNav(fund, cachedNav)
+                                    } else {
+                                        val detailsResult = getFundDetailsUseCase(fund.schemeCode)
+                                        val latestNav = detailsResult.getOrNull()?.data?.firstOrNull()?.nav
+                                        latestNav?.let { navCache[fund.schemeCode] = it }
+                                        FundWithNav(fund, latestNav)
+                                    }
+                                }
+                            }.awaitAll()
+                            
+                            category to fundsWithNav
+                        }
+                    }.awaitAll().toMap()
+                }
 
-                val results = awaitAll(indexDef, bluechipDef, taxDef, largeDef)
-                
-                val categories = mapOf(
-                    "Index Funds" to results[0].getOrThrow().take(50),
-                    "Bluechip Funds" to results[1].getOrThrow().take(50),
-                    "Tax Saver (ELSS)" to results[2].getOrThrow().take(50),
-                    "Large Cap Funds" to results[3].getOrThrow().take(50)
-                )
-
-                cachedData = categories
-                _uiState.value = Resource.Success(categories)
-
-
+                if (discoveryData.values.all { it.isEmpty() }) {
+                    _uiState.value = ExploreUiState.Empty
+                } else {
+                    _uiState.value = ExploreUiState.Success(discoveryData)
+                }
             } catch (e: Exception) {
-                _uiState.value = Resource.Error(e.localizedMessage ?: "Failed to fetch funds")
+                _uiState.value = ExploreUiState.Error(e.message ?: "An unknown error occurred")
             }
         }
     }
-
-
-
 }

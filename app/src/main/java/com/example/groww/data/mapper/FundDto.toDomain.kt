@@ -5,7 +5,7 @@ import com.example.groww.domain.model.Fund
 
 fun FundDto.toDomain(): Fund {
     return Fund(
-        id = schemeCode,
-        name = schemeName
+        schemeCode = schemeCode,
+        schemeName = schemeName,
     )
 }

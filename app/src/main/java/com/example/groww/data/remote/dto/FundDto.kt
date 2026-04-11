@@ -8,4 +8,3 @@ data class FundDto(
     val schemeCode: Int,
     val schemeName: String
 )
-

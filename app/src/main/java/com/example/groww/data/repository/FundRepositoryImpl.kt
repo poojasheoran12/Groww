@@ -1,8 +1,7 @@
 package com.example.groww.data.repository
 
-import com.example.groww.data.mapper.toDomain
 import com.example.groww.data.remote.api.ApiService
-import com.example.groww.data.remote.dto.toDomain
+import com.example.groww.data.mapper.toDomain
 import com.example.groww.domain.model.Fund
 import com.example.groww.domain.model.FundDetail
 import com.example.groww.domain.repository.FundRepository
@@ -21,13 +20,12 @@ class FundRepositoryImpl @Inject constructor(
         }
     }
 
-//    override suspend fun getFundDetails(schemeCode: Int): Result<FundDetail> {
-//        return try {
-//            val response = api.getFundDetails(schemeCode)
-//            // Use the mapper to convert FundDetailDto to FundDetail
-//            Result.success(response.toDomain())
-//        } catch (e: Exception) {
-//            Result.failure(e)
-//        }
-//    }
+    override suspend fun getFundDetails(schemeCode: Int): Result<FundDetail> {
+        return try {
+            val response = api.getFundDetails(schemeCode)
+            Result.success(response.toDomain())
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }

@@ -11,13 +11,11 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.groww.domain.model.Fund
-import com.example.groww.util.Resource
+import com.example.groww.domain.model.FundWithNav
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -30,30 +28,36 @@ fun ExploreScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Explore", fontWeight = FontWeight.Bold) },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                )
+                title = { 
+                    Text(
+                        "Explore Mutual Funds", 
+                        fontWeight = FontWeight.Bold 
+                    ) 
+                }
             )
         }
     ) { padding ->
-        Box(modifier = Modifier.fillMaxSize().padding(padding)) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .background(MaterialTheme.colorScheme.background)
+        ) {
             when (val resource = state) {
-                is Resource.Loading -> {
+                is ExploreUiState.Loading -> {
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
                 }
-                is Resource.Error -> {
-                    ErrorContent(message = resource.message, onRetry = { viewModel.fetchExploreData() })
+                is ExploreUiState.Error -> {
+                    ErrorState(resource.message) { viewModel.loadExploreData() }
                 }
-                is Resource.Success -> {
-                    if (resource.data.isEmpty()) {
-                        EmptyContent()
-                    } else {
-                        ExploreList(
-                            categories = resource.data,
-                            onViewAllClick = onViewAllClick
-                        )
-                    }
+                is ExploreUiState.Empty -> {
+                    Text("No funds found", modifier = Modifier.align(Alignment.Center))
+                }
+                is ExploreUiState.Success -> {
+                    ExploreContent(
+                        categories = resource.categories,
+                        onViewAllClick = onViewAllClick
+                    )
                 }
             }
         }
@@ -61,8 +65,8 @@ fun ExploreScreen(
 }
 
 @Composable
-fun ExploreList(
-    categories: Map<String, List<Fund>>,
+fun ExploreContent(
+    categories: Map<String, List<FundWithNav>>,
     onViewAllClick: (String) -> Unit
 ) {
     LazyColumn(
@@ -70,11 +74,11 @@ fun ExploreList(
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
-        items(categories.keys.toList()) { categoryName ->
+        items(categories.entries.toList()) { entry ->
             CategorySection(
-                title = categoryName,
-                funds = categories[categoryName] ?: emptyList(),
-                onViewAll = { onViewAllClick(categoryName) }
+                title = entry.key,
+                funds = entry.value,
+                onViewAll = { onViewAllClick(entry.key) }
             )
         }
     }
@@ -83,7 +87,7 @@ fun ExploreList(
 @Composable
 fun CategorySection(
     title: String,
-    funds: List<Fund>,
+    funds: List<FundWithNav>,
     onViewAll: () -> Unit
 ) {
     Column {
@@ -92,33 +96,33 @@ fun CategorySection(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(title, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            Text(
+                title, 
+                fontSize = 18.sp, 
+                fontWeight = FontWeight.Bold
+            )
             TextButton(onClick = onViewAll) {
-                Text("View All", color = MaterialTheme.colorScheme.primary)
+                Text("View All")
             }
         }
         
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Grid (2 columns, take 4)
-        val visibleFunds = funds.take(4)
+        // Simulated 2-column Grid (Max 4 items)
+        val chunkedFunds = funds.chunked(2)
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            for (i in 0 until (visibleFunds.size + 1) / 2) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    val firstIndex = i * 2
-                    val secondIndex = firstIndex + 1
-                    
-                    FundCard(
-                        modifier = Modifier.weight(1f),
-                        fund = visibleFunds[firstIndex]
-                    )
-                    
-                    if (secondIndex < visibleFunds.size) {
-                        FundCard(
+            chunkedFunds.forEach { rowFunds ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    rowFunds.forEach { fundWithNav ->
+                        FundGridCard(
                             modifier = Modifier.weight(1f),
-                            fund = visibleFunds[secondIndex]
+                            fundWithNav = fundWithNav
                         )
-                    } else {
+                    }
+                    if (rowFunds.size == 1) {
                         Spacer(modifier = Modifier.weight(1f))
                     }
                 }
@@ -128,59 +132,51 @@ fun CategorySection(
 }
 
 @Composable
-fun FundCard(
-    modifier: Modifier = Modifier,
-    fund: Fund
+fun FundGridCard(
+    modifier: Modifier,
+    fundWithNav: FundWithNav
 ) {
     Card(
         modifier = modifier.height(110.dp),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        )
     ) {
         Column(
-            modifier = Modifier.padding(12.dp),
+            modifier = Modifier
+                .padding(12.dp)
+                .fillMaxSize(),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
-                text = fund.schemeName,
+                text = fundWithNav.fund.schemeName,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium,
                 maxLines = 2,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
+                lineHeight = 18.sp
             )
             
             Column {
                 Text(
-                    text = "NAV",
-                    fontSize = 10.sp,
+                    "NAV", 
+                    fontSize = 10.sp, 
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                when (val nav = fund.navState) {
-                    is NavState.Loading -> {
-                        LinearProgressIndicator(
-                            modifier = Modifier.width(40.dp).height(2.dp).padding(top = 4.dp),
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                    is NavState.Success -> {
-                        Text(
-                            text = "₹${nav.nav}",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                    else -> {
-                        Text("---", fontSize = 14.sp)
-                    }
-                }
+                Text(
+                    text = fundWithNav.latestNav?.let { "₹$it" } ?: "---",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
             }
         }
     }
 }
 
 @Composable
-fun ErrorContent(message: String, onRetry: () -> Unit) {
+fun ErrorState(message: String, onRetry: () -> Unit) {
     Column(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.Center,
@@ -188,12 +184,5 @@ fun ErrorContent(message: String, onRetry: () -> Unit) {
     ) {
         Text(message, color = MaterialTheme.colorScheme.error)
         Button(onClick = onRetry) { Text("Retry") }
-    }
-}
-
-@Composable
-fun EmptyContent() {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text("No funds found.")
     }
 }
