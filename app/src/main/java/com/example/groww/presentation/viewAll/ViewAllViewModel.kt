@@ -8,6 +8,7 @@ import com.example.groww.domain.model.FundCategory
 import com.example.groww.domain.usecase.GetFundsByCategoryUseCase
 import com.example.groww.domain.usecase.GetNavUseCase
 import com.example.groww.domain.usecase.SyncCategoryUseCase
+import com.example.groww.presentation.navigation.Screen
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -29,8 +30,8 @@ class ViewAllViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val PAGE_SIZE = 20
-    private val categoryName: String = savedStateHandle.get<String>("category") ?: ""
-    private val category = FundCategory.fromDisplayName(categoryName)
+    private val categoryName: String = savedStateHandle[Screen.ARG_CATEGORY] ?: FundCategory.ALL.name
+    private val category = try { FundCategory.valueOf(categoryName) } catch (e: Exception) { FundCategory.ALL }
 
     private val _state = MutableStateFlow(ViewAllUiState())
     val state = _state.asStateFlow()

@@ -17,4 +17,5 @@ import com.example.groww.data.local.entity.WatchlistFundCrossRef
 )
 abstract class GrowwDatabase : RoomDatabase() {
     abstract fun fundDao(): FundDao
+    abstract fun watchlistDao(): WatchlistDao
 }

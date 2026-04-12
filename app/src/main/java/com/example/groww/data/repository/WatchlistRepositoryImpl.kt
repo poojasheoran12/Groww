@@ -1,6 +1,6 @@
 package com.example.groww.data.repository
 
-import com.example.groww.data.local.db.FundDao
+import com.example.groww.data.local.db.WatchlistDao
 import com.example.groww.data.local.entity.WatchlistEntity
 import com.example.groww.data.local.entity.WatchlistFundCrossRef
 import com.example.groww.data.mapper.toDomain
@@ -13,7 +13,7 @@ import javax.inject.Singleton
 
 @Singleton
 class WatchlistRepositoryImpl @Inject constructor(
-    private val dao: FundDao
+    private val dao: WatchlistDao
 ) : WatchlistRepository {
 
     override fun getAllWatchlists(): Flow<List<Watchlist>> {
@@ -27,15 +27,20 @@ class WatchlistRepositoryImpl @Inject constructor(
     }
 
     override suspend fun createWatchlist(name: String): Long {
+        require(name.isNotBlank()) { "Watchlist name cannot be empty" }
         return dao.insertWatchlist(WatchlistEntity(name = name))
     }
 
     override suspend fun deleteWatchlist(id: Long) {
-        dao.deleteWatchlist(WatchlistEntity(id = id, name = ""))
+        dao.deleteWatchlistById(id)
     }
 
     override suspend fun addFundToWatchlist(fundId: Int, watchlistId: Long) {
-        dao.insertFundToWatchlist(WatchlistFundCrossRef(watchlistId, fundId))
+        // Business Logic: Check for duplicates before adding to DB
+        val alreadyExists = dao.isFundAlreadyInWatchlist(watchlistId, fundId)
+        if (!alreadyExists) {
+            dao.insertFundToWatchlist(WatchlistFundCrossRef(watchlistId, fundId))
+        }
     }
 
     override suspend fun removeFundFromWatchlist(fundId: Int, watchlistId: Long) {

@@ -136,7 +136,7 @@ fun ViewAllFundItem(
             Spacer(modifier = Modifier.width(16.dp))
             Column(horizontalAlignment = Alignment.End) {
                 Text(
-                    text = fund.latestNav?.let { "₹$it" } ?: "---",
+                    text = fund.latestNav?.toDoubleOrNull()?.let { "₹%.2f".format(it) } ?: "---",
                     style = MaterialTheme.typography.bodyLarge,
                     color = PrimaryGreen,
                     fontWeight = FontWeight.Bold

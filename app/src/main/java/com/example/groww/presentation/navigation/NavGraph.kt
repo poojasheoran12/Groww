@@ -5,8 +5,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -14,6 +13,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.*
 import androidx.navigation.navArgument
+import com.example.groww.domain.model.FundCategory
 import com.example.groww.presentation.details.DetailsScreen
 import com.example.groww.presentation.details.DetailsViewModel
 import com.example.groww.presentation.explore.ExploreScreen
@@ -25,13 +25,14 @@ import com.example.groww.presentation.search.SearchViewModel
 import com.example.groww.presentation.watchlistDetail.WatchlistDetailScreen
 import com.example.groww.presentation.watchlist.WatchlistScreen
 import com.example.groww.presentation.watchlist.WatchlistViewModel
+import java.net.URLDecoder
+import java.nio.charset.StandardCharsets
 
 @Composable
 fun GrowwNavGraph(navController: NavHostController) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
 
-    // Standard screens that show Bottom Bar
     val bottomBarScreens = listOf(Screen.Explore.route, Screen.Watchlist.route)
     val shouldShowBottomBar = currentDestination?.route in bottomBarScreens
 
@@ -82,7 +83,9 @@ fun GrowwNavGraph(navController: NavHostController) {
                     ExploreScreen(
                         viewModel = viewModel,
                         onViewAllClick = { category ->
-                            navController.navigate(Screen.ViewAll.createRoute(category))
+                            // Use enum name for stability
+                            val cat = FundCategory.fromDisplayName(category)
+                            navController.navigate(Screen.ViewAll.createRoute(cat.name))
                         },
                         onFundClick = { id ->
                             navController.navigate(Screen.Details.createRoute(id))
@@ -95,9 +98,20 @@ fun GrowwNavGraph(navController: NavHostController) {
 
                 composable(
                     route = Screen.ViewAll.route,
-                    arguments = listOf(navArgument("category") { type = NavType.StringType })
+                    arguments = listOf(
+                        navArgument(Screen.ARG_CATEGORY) { type = NavType.StringType }
+                    )
                 ) { entry ->
-                    val category = entry.arguments?.getString("category") ?: ""
+                    val rawCategory = entry.arguments?.getString(Screen.ARG_CATEGORY) ?: FundCategory.ALL.name
+                    val decodedCategory = URLDecoder.decode(rawCategory, StandardCharsets.UTF_8.toString())
+                    
+                    // Map enum name back to display name for title
+                    val category = try { 
+                        FundCategory.valueOf(decodedCategory).displayName 
+                    } catch(e: Exception) { 
+                        FundCategory.ALL.displayName 
+                    }
+
                     val viewModel = hiltViewModel<ViewAllViewModel>()
                     ViewAllScreen(
                         category = category,
@@ -119,8 +133,8 @@ fun GrowwNavGraph(navController: NavHostController) {
                     val viewModel = hiltViewModel<WatchlistViewModel>()
                     WatchlistScreen(
                         viewModel = viewModel,
-                        onWatchlistClick = { id, name ->
-                            navController.navigate(Screen.WatchlistDetail.createRoute(id, name))
+                        onWatchlistClick = { id -> 
+                            navController.navigate(Screen.WatchlistDetail.createRoute(id))
                         }
                     )
                 }
@@ -128,21 +142,16 @@ fun GrowwNavGraph(navController: NavHostController) {
                 composable(
                     route = Screen.WatchlistDetail.route,
                     arguments = listOf(
-                        navArgument("id") { type = NavType.LongType },
-                        navArgument("name") { type = NavType.StringType }
+                        navArgument(Screen.ARG_WATCHLIST_ID) { type = NavType.LongType }
                     )
-                ) { entry ->
-                    val id = entry.arguments?.getLong("id") ?: -1L
-                    val name = entry.arguments?.getString("name") ?: ""
+                ) {
                     WatchlistDetailScreen(
-                        watchlistId = id,
-                        watchlistName = name,
                         onBackClick = { navController.popBackStack() },
                         onFundClick = { fundId ->
                             navController.navigate(Screen.Details.createRoute(fundId))
                         },
                         onExploreClick = {
-                            navController.navigate(Screen.ViewAll.createRoute("ALL"))
+                            navController.navigate(Screen.ViewAll.createRoute(FundCategory.ALL.name))
                         }
                     )
                 }
@@ -151,7 +160,9 @@ fun GrowwNavGraph(navController: NavHostController) {
             // Details
             composable(
                 route = Screen.Details.route,
-                arguments = listOf(navArgument("id") { type = NavType.IntType })
+                arguments = listOf(
+                    navArgument(Screen.ARG_FUND_ID) { type = NavType.IntType }
+                )
             ) {
                 val viewModel = hiltViewModel<DetailsViewModel>()
                 DetailsScreen(

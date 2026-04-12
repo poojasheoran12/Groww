@@ -9,6 +9,7 @@ import com.example.groww.presentation.common.UiState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import com.example.groww.presentation.navigation.Screen
 import javax.inject.Inject
 
 @HiltViewModel
@@ -23,7 +24,7 @@ class DetailsViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
-    private val fundId: Int = savedStateHandle.get<Int>("id") ?: -1
+    private val fundId: Int = savedStateHandle[Screen.ARG_FUND_ID] ?: -1
 
     private val _detailsState = MutableStateFlow<UiState<FundDetails>>(UiState.Loading)
     val detailsState = _detailsState.asStateFlow()

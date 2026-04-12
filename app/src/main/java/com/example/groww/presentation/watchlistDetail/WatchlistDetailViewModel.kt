@@ -9,6 +9,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
+import com.example.groww.presentation.navigation.Screen
 import javax.inject.Inject
 
 @HiltViewModel
@@ -17,7 +18,7 @@ class WatchlistDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
-    private val watchlistId: Long = savedStateHandle.get<Long>("id") ?: -1L
+    private val watchlistId: Long = savedStateHandle[Screen.ARG_WATCHLIST_ID] ?: -1L
 
     val watchlist: StateFlow<Watchlist?> = getWatchlistWithFundsUseCase(watchlistId)
         .stateIn(viewModelScope, SharingStarted.Companion.WhileSubscribed(5000), null)

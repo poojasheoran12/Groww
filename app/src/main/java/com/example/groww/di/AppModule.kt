@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import com.example.groww.data.local.db.FundDao
 import com.example.groww.data.local.db.GrowwDatabase
+import com.example.groww.data.local.db.WatchlistDao
 import com.example.groww.data.remote.api.MutualFundApi
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import dagger.Module
@@ -35,6 +36,9 @@ object AppModule {
 
     @Provides
     fun provideFundDao(db: GrowwDatabase): FundDao = db.fundDao()
+
+    @Provides
+    fun provideWatchlistDao(db: GrowwDatabase): WatchlistDao = db.watchlistDao()
 
     @Provides
     @Singleton

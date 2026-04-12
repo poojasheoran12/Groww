@@ -19,19 +19,16 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.airbnb.lottie.compose.*
 import com.example.groww.presentation.explore.FundCard
-import com.example.groww.presentation.watchlistDetail.WatchlistDetailViewModel
 import com.example.groww.ui.theme.PrimaryGreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WatchlistDetailScreen(
-    watchlistId: Long,
-    watchlistName: String,
     onBackClick: () -> Unit,
     onFundClick: (Int) -> Unit,
-    onExploreClick: () -> Unit
+    onExploreClick: () -> Unit,
+    viewModel: WatchlistDetailViewModel = hiltViewModel()
 ) {
-    val viewModel: WatchlistDetailViewModel = hiltViewModel()
     val watchlist by viewModel.watchlist.collectAsState()
 
     Scaffold(
@@ -39,7 +36,7 @@ fun WatchlistDetailScreen(
             TopAppBar(
                 title = { 
                     Text(
-                        text = watchlistName,
+                        text = watchlist?.name ?: "Loading...",
                         fontWeight = FontWeight.Bold,
                         fontStyle = FontStyle.Italic
                     ) 

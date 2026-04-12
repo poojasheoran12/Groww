@@ -250,7 +250,7 @@ fun FundCard(fund: Fund, onClick: () -> Unit, modifier: Modifier = Modifier) {
             Column {
                 Text(text = "NAV", style = MaterialTheme.typography.labelSmall)
                 Text(
-                    text = fund.latestNav?.let { "₹$it" } ?: "---",
+                    text = fund.latestNav?.toDoubleOrNull()?.let { "₹%.2f".format(it) } ?: "---",
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface

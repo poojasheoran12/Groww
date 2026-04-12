@@ -30,7 +30,7 @@ import com.example.groww.ui.theme.PrimaryGreen
 @Composable
 fun WatchlistScreen(
     viewModel: WatchlistViewModel,
-    onWatchlistClick: (Long, String) -> Unit
+    onWatchlistClick: (Long) -> Unit
 ) {
     val watchlists by viewModel.watchlists.collectAsState()
     var showAddDialog by remember { mutableStateOf(false) }
@@ -71,7 +71,7 @@ fun WatchlistScreen(
                             ) {
                                 WatchlistItem(
                                     watchlist = watchlist,
-                                    onClick = { onWatchlistClick(watchlist.id, watchlist.name) },
+                                    onClick = { onWatchlistClick(watchlist.id) },
                                     onDelete = { viewModel.deleteWatchlist(watchlist.id) }
                                 )
                             }
