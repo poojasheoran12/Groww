@@ -81,11 +81,11 @@ class FundRepositoryImpl @Inject constructor(
             }
             dao.upsertFunds(entities)
 
-            // Specifically for the top 4 in this category, fetch NAV if missing
-            networkResults.take(4).forEach { fund ->
-                coroutineScope {
+            // Specifically for the top 4 in this category, fetch NAV if missing in parallel
+            coroutineScope {
+                networkResults.take(4).map { fund ->
                     async { lazyFetchNav(fund.schemeCode) }
-                }
+                }.awaitAll()
             }
         }
     }

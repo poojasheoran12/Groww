@@ -99,22 +99,17 @@ fun ExploreScreen(
                     }
                 } else {
                     exploreData.forEach { (category, funds) ->
-                        item {
-                            AnimatedVisibility(
-                                visible = true,
-                                enter = fadeIn() + expandVertically()
-                            ) {
-                                Column {
-                                    SectionHeader(
-                                        title = category,
-                                        onViewAllClick = { onViewAllClick(category) }
-                                    )
-                                    Spacer(modifier = Modifier.height(16.dp))
-                                    CategoryGrid(
-                                        funds = funds,
-                                        onFundClick = onFundClick
-                                    )
-                                }
+                        item(key = category) {
+                            Column {
+                                SectionHeader(
+                                    title = category,
+                                    onViewAllClick = { onViewAllClick(category) }
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+                                CategoryGrid(
+                                    funds = funds,
+                                    onFundClick = onFundClick
+                                )
                             }
                         }
                     }

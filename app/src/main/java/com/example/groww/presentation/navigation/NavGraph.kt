@@ -34,7 +34,7 @@ fun GrowwNavGraph(navController: NavHostController) {
     val currentDestination = navBackStackEntry?.destination
 
     val bottomBarScreens = listOf(Screen.Explore.route, Screen.Watchlist.route)
-    val shouldShowBottomBar = currentDestination?.route in bottomBarScreens
+    val shouldShowBottomBar = currentDestination?.hierarchy?.any { it.route in bottomBarScreens } == true
 
     Scaffold(
         bottomBar = {
