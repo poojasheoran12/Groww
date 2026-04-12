@@ -109,20 +109,26 @@ One of the project's core objectives was to eliminate the common "lag" found in 
 
 ---
 
-## 📂 Project Structure Detail
+## 📂 Project Structure
 ```text
 app/src/main/java/com/example/groww/
 ├── data/
-│   ├── local/          # Room DB, Entity & DAO definitions
-│   ├── remote/         # Retrofit APIs & DTO models
-│   └── repository/     # Repository implementations (The SSOT Logic)
+│   ├── local/          # Room Database, Entities & DAOs
+│   ├── remote/         # Retrofit API definitions & DTOs
+│   ├── repository/     # Repository implementations (The SSOT Logic)
+│   └── mapper/         # Data transformation (Entity <-> Domain)
 ├── domain/
-│   ├── model/          # Clean Domain Entities
+│   ├── model/          # Clean Domain Entities (POJOs)
 │   ├── repository/     # Repository Interfaces
-│   └── usecase/        # Specific Business Actions
-└── presentation/
-    ├── explore/        # Category discovery & parallel loading
-    ├── details/        # Fund details & Custom Charting
-    ├── search/         # Reactive universal search
-    └── watchlist/      # Portfolio management
+│   └── usecase/        # Specific Business Logic (Add, Get, Sync)
+├── presentation/       # Feature-wise UI & ViewModels
+│   ├── explore/        # Category discovery & parallel loading
+│   ├── search/         # Reactive universal search
+│   ├── details/        # Fund details & Custom Charting
+│   ├── watchlist/      # Portfolio/Watchlist management
+│   ├── viewAll/        # Categorized lists & client pagination
+│   └── navigation/     # GrowwNavGraph & Screen definitions
+├── di/                 # Hilt Dependency Injection Modules
+├── ui/theme/           # Theme, Color, and Typography setups
+└── util/               # Shared utilities (Modifier extensions, etc.)
 ```
