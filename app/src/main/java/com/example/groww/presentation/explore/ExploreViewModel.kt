@@ -14,11 +14,18 @@ class ExploreViewModel @Inject constructor(
     private val getExploreFundsUseCase: GetExploreFundsUseCase
 ) : ViewModel() {
 
-    private val _exploreState = MutableStateFlow<Map<String, List<Fund>>>(emptyMap())
-    val exploreState = _exploreState.asStateFlow()
-
     private val _loadingState = MutableStateFlow(false)
     val loadingState = _loadingState.asStateFlow()
+
+    val exploreState: StateFlow<Map<String, List<Fund>>> = getExploreFundsUseCase()
+        .map { data -> 
+            data.mapKeys { it.key.displayName } 
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyMap()
+        )
 
     init {
         refreshData()
@@ -27,10 +34,14 @@ class ExploreViewModel @Inject constructor(
     fun refreshData() {
         viewModelScope.launch {
             _loadingState.value = true
-            getExploreFundsUseCase.cleanup()
-            val data = getExploreFundsUseCase()
-            _exploreState.value = data.mapKeys { it.key.displayName }
-            _loadingState.value = false
+            try {
+                getExploreFundsUseCase.cleanup()
+                getExploreFundsUseCase.sync()
+            } catch (e: Exception) {
+                // Background sync error, UI will still show cached DB data
+            } finally {
+                _loadingState.value = false
+            }
         }
     }
 }

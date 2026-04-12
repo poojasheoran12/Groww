@@ -6,7 +6,8 @@ import com.example.groww.domain.model.FundDetails
 import kotlinx.coroutines.flow.Flow
 
 interface FundRepository {
-    suspend fun fetchExploreData(): Map<FundCategory, List<Fund>>
+    fun getExploreFundsFlow(): Flow<Map<FundCategory, List<Fund>>>
+    suspend fun syncExploreFunds()
     fun getFundsByCategory(category: FundCategory): Flow<List<Fund>>
     suspend fun syncCategoryFunds(category: FundCategory)
     suspend fun getFundDetails(id: Int, forceRefresh: Boolean = false): FundDetails

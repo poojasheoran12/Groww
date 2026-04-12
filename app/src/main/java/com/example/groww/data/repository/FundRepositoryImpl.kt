@@ -11,8 +11,7 @@ import com.example.groww.domain.repository.FundRepository
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.*
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -33,32 +32,24 @@ class FundRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun fetchExploreData(): Map<FundCategory, List<Fund>> = coroutineScope {
+    override fun getExploreFundsFlow(): Flow<Map<FundCategory, List<Fund>>> {
         val categories = FundCategory.entries.filter { it != FundCategory.SEARCH && it != FundCategory.ALL }
         
-        categories.associateWith { category ->
-            async {
-                try {
-                    val searchResults = api.searchFunds(category.apiQuery).take(4)
-                    searchResults.map { searchResult ->
-                        async {
-                            val detailsDto = api.getFundDetails(searchResult.schemeCode)
-                            val domainDetails = detailsDto.toDomain()
-                            
-                            synchronized(memoryCache) {
-                                memoryCache[searchResult.schemeCode] = domainDetails
-                            }
+        val categoryFlows = categories.map { category ->
+            getFundsByCategory(category).map { funds -> category to funds.take(4) }
+        }
 
-                            searchResult.toDomain(category.displayName).copy(
-                                latestNav = domainDetails.latestNav
-                            )
-                        }
-                    }.awaitAll()
-                } catch (e: Exception) {
-                    emptyList()
-                }
-            }
-        }.mapValues { it.value.await() }
+        return combine(categoryFlows) { categoryPairs ->
+            categoryPairs.toMap()
+        }
+    }
+
+    override suspend fun syncExploreFunds(): Unit = coroutineScope {
+        val categories = FundCategory.entries.filter { it != FundCategory.SEARCH && it != FundCategory.ALL }
+        
+        categories.map { category ->
+            async { syncCategoryFunds(category) }
+        }.awaitAll()
     }
 
     override fun getFundsByCategory(category: FundCategory): Flow<List<Fund>> {
@@ -68,8 +59,13 @@ class FundRepositoryImpl @Inject constructor(
     }
 
     override suspend fun syncCategoryFunds(category: FundCategory) {
-        try {
-            val networkResults = api.searchFunds(category.apiQuery)
+        val networkResults = try {
+            api.searchFunds(category.apiQuery)
+        } catch (e: Exception) {
+            emptyList()
+        }
+
+        if (networkResults.isNotEmpty()) {
             val entities = networkResults.map { searchResult ->
                 val existingInRoom = dao.getFundById(searchResult.schemeCode)
                 val existingInCache = synchronized(memoryCache) { memoryCache[searchResult.schemeCode] }
@@ -84,7 +80,14 @@ class FundRepositoryImpl @Inject constructor(
                 )
             }
             dao.upsertFunds(entities)
-        } catch (e: Exception) { }
+
+            // Specifically for the top 4 in this category, fetch NAV if missing
+            networkResults.take(4).forEach { fund ->
+                coroutineScope {
+                    async { lazyFetchNav(fund.schemeCode) }
+                }
+            }
+        }
     }
 
     override suspend fun lazyFetchNav(id: Int) {
