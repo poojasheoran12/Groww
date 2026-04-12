@@ -11,6 +11,7 @@ import com.example.groww.domain.repository.FundRepository
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.*
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -81,7 +82,7 @@ class FundRepositoryImpl @Inject constructor(
             }
             dao.upsertFunds(entities)
 
-            // Specifically for the top 4 in this category, fetch NAV if missing in parallel
+
             coroutineScope {
                 networkResults.take(4).map { fund ->
                     async { lazyFetchNav(fund.schemeCode) }
@@ -129,31 +130,38 @@ class FundRepositoryImpl @Inject constructor(
     }
 
     override fun searchFunds(query: String): Flow<List<Fund>> = flow {
-        // 1. Instant Local Search
         val localEntities = dao.searchFundsInRoom("%$query%")
         val localFunds = localEntities.map { it.toDomain() }
         emit(localFunds)
 
-        // 2. Network Enhancement
         try {
             val networkResults = api.searchFunds(query)
-            val domainFunds = networkResults.map { searchResult ->
-                // Hydrate from Room if possible
+            val ids = networkResults.map { it.schemeCode }
+            
+            val entities = networkResults.map { searchResult ->
                 val existing = dao.getFundById(searchResult.schemeCode)
-                val domainFund = searchResult.toDomain(FundCategory.SEARCH.displayName)
-                
-                if (existing?.latestNav != null) {
-                    domainFund.copy(latestNav = existing.latestNav)
-                } else {
-                    domainFund
+                searchResult.toEntity(FundCategory.SEARCH.displayName).copy(
+                    latestNav = existing?.latestNav,
+                    lastUpdated = existing?.lastUpdated ?: 0L
+                )
+            }
+            dao.upsertFunds(entities)
+
+
+            coroutineScope {
+                ids.take(5).forEach { id ->
+                    launch { lazyFetchNav(id) }
                 }
             }
-            
-            if (domainFunds.isNotEmpty()) {
-                emit(domainFunds)
+
+
+            dao.getFundsByIdsFlow(ids).collect { updatedEntities ->
+                val sortedResults = ids.mapNotNull { id ->
+                    updatedEntities.find { it.id == id }?.toDomain()
+                }
+                emit(sortedResults)
             }
         } catch (e: Exception) {
-            // Keep existing local results if network fails
         }
     }
 
