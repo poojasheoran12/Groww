@@ -18,6 +18,23 @@ The app follows a strict **Clean Architecture** pattern, ensuring separation of 
 
 ---
 
+## 🎯 Assignment Checklist
+| Component | Status | Feature |
+| :--- | :---: | :--- |
+| **Explore Screen** | ✅ | Category Grids (Index, Bluechip, etc.) + View All |
+| **Portfolio** | ✅ | Multi-folder Watchlists + High-quality Empty States |
+| **Fund Details** | ✅ | NAV History Chart + Dynamic Bookmark Icon |
+| **Bottom Sheet** | ✅ | Multi-folder Selection + New Folder Creation |
+| **Search** | ✅ | Debounced (300ms) Global Fund Discovery |
+| **Architecture** | ✅ | MVVM + Clean Architecture + Hilt DI |
+| **Persistence** | ✅ | Room (SSOT) + Local Caching |
+| **Theme** | ✅ | Dynamic Light/Dark Mode Support |
+| **Testing** | ✅ | Unit Tests (MockK, Truth, Turbine) |
+| **Visuals** | ✅ | Shimmer Loading + Subtle Transitions |
+
+---
+
+
 ## ✨ Performance Optimizations
 
 One of the project's core objectives was to eliminate the common "lag" found in financial apps through advanced coroutine orchestration.
