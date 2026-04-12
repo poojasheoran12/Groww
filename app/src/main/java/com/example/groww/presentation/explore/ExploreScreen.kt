@@ -59,6 +59,18 @@ fun ExploreScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         contentPadding = PaddingValues(end = 16.dp)
                     ) {
+                        item {
+                            FilterChip(
+                                onClick = { onViewAllClick(FundCategory.ALL.displayName) },
+                                label = { Text("All Funds") },
+                                selected = true,
+                                shape = RoundedCornerShape(20.dp),
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = PrimaryGreen,
+                                    selectedLabelColor = Color.White
+                                )
+                            )
+                        }
                         items(categories) { category ->
                             FilterChip(
                                 onClick = { onViewAllClick(category.displayName) },

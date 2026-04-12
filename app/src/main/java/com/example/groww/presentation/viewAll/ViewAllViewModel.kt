@@ -1,4 +1,4 @@
-package com.example.groww.presentation.explore
+package com.example.groww.presentation.viewAll
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel

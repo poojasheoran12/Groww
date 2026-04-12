@@ -1,5 +1,6 @@
-package com.example.groww.presentation.watchlist
+package com.example.groww.presentation.watchlistDetail
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -18,6 +19,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.airbnb.lottie.compose.*
 import com.example.groww.presentation.explore.FundCard
+import com.example.groww.presentation.watchlistDetail.WatchlistDetailViewModel
 import com.example.groww.ui.theme.PrimaryGreen
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -133,7 +135,7 @@ fun EmptyFolderState(onExploreClick: () -> Unit) {
                 .fillMaxWidth(0.7f)
                 .height(56.dp),
             shape = MaterialTheme.shapes.medium,
-            border = androidx.compose.foundation.BorderStroke(2.dp, Color.Black)
+            border = BorderStroke(2.dp, Color.Black)
         ) {
             Text(
                 text = "Explore Funds",

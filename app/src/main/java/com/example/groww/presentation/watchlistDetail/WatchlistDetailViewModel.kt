@@ -1,4 +1,4 @@
-package com.example.groww.presentation.watchlist
+package com.example.groww.presentation.watchlistDetail
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -6,7 +6,9 @@ import androidx.lifecycle.viewModelScope
 import com.example.groww.domain.model.Watchlist
 import com.example.groww.domain.usecase.GetWatchlistWithFundsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 
 @HiltViewModel
@@ -18,5 +20,5 @@ class WatchlistDetailViewModel @Inject constructor(
     private val watchlistId: Long = savedStateHandle.get<Long>("id") ?: -1L
 
     val watchlist: StateFlow<Watchlist?> = getWatchlistWithFundsUseCase(watchlistId)
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+        .stateIn(viewModelScope, SharingStarted.Companion.WhileSubscribed(5000), null)
 }

@@ -7,7 +7,6 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -19,11 +18,11 @@ import com.example.groww.presentation.details.DetailsScreen
 import com.example.groww.presentation.details.DetailsViewModel
 import com.example.groww.presentation.explore.ExploreScreen
 import com.example.groww.presentation.explore.ExploreViewModel
-import com.example.groww.presentation.explore.ViewAllScreen
-import com.example.groww.presentation.explore.ViewAllViewModel
+import com.example.groww.presentation.viewAll.ViewAllScreen
+import com.example.groww.presentation.viewAll.ViewAllViewModel
 import com.example.groww.presentation.search.SearchScreen
 import com.example.groww.presentation.search.SearchViewModel
-import com.example.groww.presentation.watchlist.WatchlistDetailScreen
+import com.example.groww.presentation.watchlistDetail.WatchlistDetailScreen
 import com.example.groww.presentation.watchlist.WatchlistScreen
 import com.example.groww.presentation.watchlist.WatchlistViewModel
 

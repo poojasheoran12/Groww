@@ -60,7 +60,7 @@ class FundRepositoryImpl @Inject constructor(
 
     override suspend fun syncCategoryFunds(category: FundCategory) {
         val networkResults = try {
-            api.searchFunds(category.apiQuery)
+            api.searchFunds(getApiQuery(category))
         } catch (e: Exception) {
             emptyList()
         }
@@ -152,6 +152,17 @@ class FundRepositoryImpl @Inject constructor(
     override suspend fun cleanupExpiredData() {
         val threshold = System.currentTimeMillis() - CACHE_EXPIRY_MS
         dao.deleteOldFunds(threshold)
+    }
+
+    private fun getApiQuery(category: FundCategory): String {
+        return when (category) {
+            FundCategory.ALL -> "growth"
+            FundCategory.INDEX -> "index"
+            FundCategory.BLUECHIP -> "bluechip"
+            FundCategory.TAX -> "tax"
+            FundCategory.LARGE_CAP -> "large"
+            else -> ""
+        }
     }
 
     private fun isExpired(lastUpdated: Long): Boolean {

@@ -13,10 +13,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.groww.presentation.common.UiState
-import com.example.groww.presentation.explore.ViewAllFundItem
+import com.example.groww.presentation.viewAll.ViewAllFundItem
 import com.example.groww.ui.theme.BackgroundLight
 import com.example.groww.util.shimmerEffect
 
