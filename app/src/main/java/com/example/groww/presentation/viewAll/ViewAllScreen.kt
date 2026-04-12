@@ -42,7 +42,7 @@ fun ViewAllScreen(
     }
 
     Scaffold(
-        containerColor = BackgroundLight,
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
                 title = { Text(category, fontWeight = FontWeight.Bold) },
@@ -51,7 +51,10 @@ fun ViewAllScreen(
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = BackgroundLight)
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface
+                )
             )
         }
     ) { padding ->
@@ -64,7 +67,13 @@ fun ViewAllScreen(
             ) {
                 if (uiState.visibleFunds.isEmpty() && uiState.isLoadingMore) {
                     items(10) {
-                        Box(modifier = Modifier.fillMaxWidth().height(80.dp).shimmerEffect().clip(RoundedCornerShape(12.dp)))
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(80.dp)
+                                .shimmerEffect()
+                                .clip(RoundedCornerShape(12.dp))
+                        )
                     }
                 } else {
                     items(uiState.visibleFunds, key = { it.id }) { fund ->
@@ -125,7 +134,8 @@ fun ViewAllFundItem(
                     text = fund.name,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    maxLines = 2
+                    maxLines = 2,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
                     text = fund.category,
@@ -141,7 +151,11 @@ fun ViewAllFundItem(
                     color = PrimaryGreen,
                     fontWeight = FontWeight.Bold
                 )
-                Text(text = "NAV", style = MaterialTheme.typography.labelSmall)
+                Text(
+                    text = "NAV", 
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }

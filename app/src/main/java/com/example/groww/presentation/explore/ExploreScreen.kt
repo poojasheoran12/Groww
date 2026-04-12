@@ -2,7 +2,6 @@ package com.example.groww.presentation.explore
 
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -32,15 +31,39 @@ fun ExploreScreen(
     viewModel: ExploreViewModel,
     onViewAllClick: (String) -> Unit,
     onFundClick: (Int) -> Unit,
-    onSearchClick: () -> Unit
+    onSearchClick: () -> Unit,
+    themeViewModel: com.example.groww.presentation.ThemeViewModel = androidx.hilt.navigation.compose.hiltViewModel()
 ) {
     val exploreData by viewModel.exploreState.collectAsState()
     val isLoading by viewModel.loadingState.collectAsState()
+    val isDarkTheme by themeViewModel.isDarkTheme.collectAsState(initial = false)
 
     val categories = FundCategory.entries.filter { it != FundCategory.SEARCH && it != FundCategory.ALL }
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.background
+        containerColor = MaterialTheme.colorScheme.background,
+        topBar = {
+            TopAppBar(
+                title = { 
+                    Text(
+                        text = "Mutual Funds", 
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold
+                    ) 
+                },
+                actions = {
+                    IconButton(onClick = { themeViewModel.toggleTheme() }) {
+                        Text(
+                            text = if (isDarkTheme) "☀️" else "🌙",
+                            style = MaterialTheme.typography.titleLarge
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background
+                )
+            )
+        }
     ) { padding ->
         Box(modifier = Modifier.padding(padding).fillMaxSize()) {
             LazyColumn(
@@ -48,12 +71,12 @@ fun ExploreScreen(
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(24.dp)
             ) {
-                // Search Bar
+
                 item {
                     SearchInput(onClick = onSearchClick)
                 }
 
-                // Category Chips
+
                 item {
                     LazyRow(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -92,7 +115,7 @@ fun ExploreScreen(
                     }
                 }
 
-                // Layout with Content or Skeleton
+
                 if (isLoading && exploreData.isEmpty()) {
                     items(3) {
                         SkeletonCategorySection()

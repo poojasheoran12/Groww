@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountBox
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -17,7 +18,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.airbnb.lottie.compose.*
 import com.example.groww.presentation.explore.FundCard
 import com.example.groww.ui.theme.PrimaryGreen
 
@@ -32,20 +32,24 @@ fun WatchlistDetailScreen(
     val watchlist by viewModel.watchlist.collectAsState()
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
                 title = { 
                     Text(
                         text = watchlist?.name ?: "Loading...",
                         fontWeight = FontWeight.Bold,
-                        fontStyle = FontStyle.Italic
+                        style = MaterialTheme.typography.titleLarge
                     ) 
                 },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background
+                )
             )
         }
     ) { padding ->
@@ -70,21 +74,16 @@ fun WatchlistDetailScreen(
                         }
                     }
                 }
-            } ?: CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+            } ?: CircularProgressIndicator(
+                modifier = Modifier.align(Alignment.Center),
+                color = PrimaryGreen
+            )
         }
     }
 }
 
 @Composable
 fun EmptyFolderState(onExploreClick: () -> Unit) {
-    val composition by rememberLottieComposition(
-        LottieCompositionSpec.Url("https://lottie.host/7905a5a1-7786-4f9e-abab-327c5b6b1988/d7F8uYtN1l.json")
-    )
-    val progress by animateLottieCompositionAsState(
-        composition = composition,
-        iterations = LottieConstants.IterateForever
-    )
-
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -92,54 +91,49 @@ fun EmptyFolderState(onExploreClick: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Box(modifier = Modifier.size(240.dp), contentAlignment = Alignment.Center) {
-            if (composition == null) {
-                CircularProgressIndicator(color = PrimaryGreen.copy(alpha = 0.5f))
-            } else {
-                LottieAnimation(
-                    composition = composition,
-                    progress = { progress },
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
-        }
+        Icon(
+            imageVector = Icons.Default.AccountBox,
+            contentDescription = null,
+            modifier = Modifier.size(120.dp),
+            tint = PrimaryGreen.copy(alpha = 0.5f)
+        )
         
         Spacer(modifier = Modifier.height(32.dp))
         
         Text(
-            text = "No funds added yet.",
+            text = "No funds added yet",
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
-            fontStyle = FontStyle.Italic
+            color = MaterialTheme.colorScheme.onBackground
         )
         
         Spacer(modifier = Modifier.height(12.dp))
         
         Text(
-            text = "Explore the market to save funds into\nthis portfolio.",
+            text = "Explore the market and save funds into this portfolio.",
             style = MaterialTheme.typography.bodyLarge,
             textAlign = TextAlign.Center,
-            fontStyle = FontStyle.Italic,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             lineHeight = 22.sp
         )
         
         Spacer(modifier = Modifier.height(48.dp))
         
-        OutlinedButton(
+        Button(
             onClick = onExploreClick,
             modifier = Modifier
                 .fillMaxWidth(0.7f)
                 .height(56.dp),
             shape = MaterialTheme.shapes.medium,
-            border = BorderStroke(2.dp, Color.Black)
+            colors = ButtonDefaults.buttonColors(
+                containerColor = PrimaryGreen,
+                contentColor = Color.White
+            )
         ) {
             Text(
                 text = "Explore Funds",
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                fontStyle = FontStyle.Italic,
-                color = Color.Black
+                fontWeight = FontWeight.Bold
             )
         }
     }
