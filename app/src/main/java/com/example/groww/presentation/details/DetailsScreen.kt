@@ -1,10 +1,14 @@
 package com.example.groww.presentation.details
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -17,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import com.example.groww.domain.model.FundDetails
 import com.example.groww.domain.model.NavPoint
 import com.example.groww.presentation.common.UiState
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -25,6 +30,13 @@ fun DetailsScreen(
     onBackClick: () -> Unit
 ) {
     val state by viewModel.detailsState.collectAsState()
+    val isFavorite by viewModel.isInCategoryWatchlist.collectAsState()
+    val allWatchlists by viewModel.allWatchlists.collectAsState()
+    val activeWatchlistIds by viewModel.activeWatchlistIds.collectAsState()
+    
+    val sheetState = rememberModalBottomSheetState()
+    val scope = rememberCoroutineScope()
+    var showBottomSheet by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -33,6 +45,15 @@ fun DetailsScreen(
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { showBottomSheet = true }) {
+                        Icon(
+                            imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                            contentDescription = "Watchlist",
+                            tint = if (isFavorite) Color.Red else LocalContentColor.current
+                        )
                     }
                 }
             )
@@ -93,6 +114,82 @@ fun DetailsScreen(
                     }
                 }
                 else -> {}
+            }
+        }
+
+        if (showBottomSheet) {
+            ModalBottomSheet(
+                onDismissRequest = { showBottomSheet = false },
+                sheetState = sheetState
+            ) {
+                WatchlistBottomSheetContent(
+                    allWatchlists = allWatchlists,
+                    activeIds = activeWatchlistIds,
+                    onToggle = { id, isSelected -> viewModel.toggleWatchlist(id, isSelected) },
+                    onCreateNew = { viewModel.createAndAddToWatchlist(it) }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun WatchlistBottomSheetContent(
+    allWatchlists: List<com.example.groww.domain.model.Watchlist>,
+    activeIds: List<Long>,
+    onToggle: (Long, Boolean) -> Unit,
+    onCreateNew: (String) -> Unit
+) {
+    var newWatchlistName by remember { mutableStateOf("") }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+            .padding(bottom = 32.dp)
+    ) {
+        Text(text = "Add to Portfolio", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            OutlinedTextField(
+                value = newWatchlistName,
+                onValueChange = { newWatchlistName = it },
+                modifier = Modifier.weight(1f),
+                placeholder = { Text("New Portfolio Name...") },
+                singleLine = true
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Button(
+                onClick = {
+                    if (newWatchlistName.isNotBlank()) {
+                        onCreateNew(newWatchlistName)
+                        newWatchlistName = ""
+                    }
+                },
+                enabled = newWatchlistName.isNotBlank()
+            ) {
+                Text("Add")
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        allWatchlists.forEach { watchlist ->
+            val isSelected = activeIds.contains(watchlist.id)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onToggle(watchlist.id, !isSelected) }
+                    .padding(vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Checkbox(checked = isSelected, onCheckedChange = { onToggle(watchlist.id, it) })
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(text = watchlist.name, style = MaterialTheme.typography.bodyLarge)
             }
         }
     }

@@ -1,12 +1,15 @@
 package com.example.groww.data.repository
 
 import com.example.groww.data.local.db.FundDao
+import com.example.groww.data.local.entity.WatchlistEntity
+import com.example.groww.data.local.entity.WatchlistFundCrossRef
 import com.example.groww.data.mapper.toDomain
 import com.example.groww.data.mapper.toEntity
 import com.example.groww.data.remote.api.MutualFundApi
 import com.example.groww.domain.model.Fund
 import com.example.groww.domain.model.FundCategory
 import com.example.groww.domain.model.FundDetails
+import com.example.groww.domain.model.Watchlist
 import com.example.groww.domain.repository.FundRepository
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -45,7 +48,6 @@ class FundRepositoryImpl @Inject constructor(
                             val detailsDto = api.getFundDetails(searchResult.schemeCode)
                             val domainDetails = detailsDto.toDomain()
                             
-                            // Save to memory cache for later use in View All
                             synchronized(memoryCache) {
                                 memoryCache[searchResult.schemeCode] = domainDetails
                             }
@@ -80,38 +82,31 @@ class FundRepositoryImpl @Inject constructor(
                     lastUpdated = if (existingInCache != null || existingInRoom != null) {
                         System.currentTimeMillis()
                     } else {
-                        System.currentTimeMillis() // Or 0 if never updated
+                        System.currentTimeMillis()
                     }
                 )
             }
             dao.upsertFunds(entities)
-        } catch (e: Exception) {
-            // Handle error
-        }
+        } catch (e: Exception) { }
     }
 
     override suspend fun lazyFetchNav(id: Int) {
-        // 1. Check Room first (Single Source of Truth)
         val existing = dao.getFundById(id)
         if (existing?.latestNav != null && !isExpired(existing.lastUpdated)) return
 
-        // 2. Check memory cache (already fetched in Explore but not saved to Room)
         val memoryNav = synchronized(memoryCache) { memoryCache[id]?.latestNav }
         if (memoryNav != null) {
             dao.updateNavAndTimestamp(id, memoryNav, System.currentTimeMillis())
             return
         }
 
-        // 3. Finally, fetch from network
         try {
             val response = api.getFundDetails(id)
             val latestNav = response.data.firstOrNull()?.nav
             if (latestNav != null) {
                 dao.updateNavAndTimestamp(id, latestNav, System.currentTimeMillis())
             }
-        } catch (e: Exception) {
-            // Handle error
-        }
+        } catch (e: Exception) { }
     }
 
     override suspend fun getFundDetails(id: Int, forceRefresh: Boolean): FundDetails {
@@ -128,11 +123,7 @@ class FundRepositoryImpl @Inject constructor(
             memoryCache[id] = domainDetails
         }
 
-        dao.updateNavAndTimestamp(
-            id = id,
-            nav = domainDetails.latestNav,
-            lastUpdated = System.currentTimeMillis()
-        )
+        dao.upsertFunds(listOf(domainDetails.toEntity()))
 
         return domainDetails
     }
@@ -148,6 +139,41 @@ class FundRepositoryImpl @Inject constructor(
     override suspend fun cleanupExpiredData() {
         val threshold = System.currentTimeMillis() - CACHE_EXPIRY_MS
         dao.deleteOldFunds(threshold)
+    }
+
+    // Watchlist Implementation
+    override fun getAllWatchlists(): Flow<List<Watchlist>> {
+        return dao.getAllWatchlists().map { entities ->
+            entities.map { it.toDomain() }
+        }
+    }
+
+    override fun getWatchlistWithFunds(id: Long): Flow<Watchlist> {
+        return dao.getWatchlistWithFunds(id).map { it.toDomain() }
+    }
+
+    override suspend fun createWatchlist(name: String): Long {
+        return dao.insertWatchlist(WatchlistEntity(name = name))
+    }
+
+    override suspend fun deleteWatchlist(id: Long) {
+        dao.deleteWatchlist(WatchlistEntity(id = id, name = ""))
+    }
+
+    override suspend fun addFundToWatchlist(fundId: Int, watchlistId: Long) {
+        dao.insertFundToWatchlist(WatchlistFundCrossRef(watchlistId, fundId))
+    }
+
+    override suspend fun removeFundFromWatchlist(fundId: Int, watchlistId: Long) {
+        dao.removeFundFromWatchlist(WatchlistFundCrossRef(watchlistId, fundId))
+    }
+
+    override fun isFundInAnyWatchlist(fundId: Int): Flow<Boolean> {
+        return dao.isFundInAnyWatchlist(fundId)
+    }
+
+    override fun getWatchlistsForFund(fundId: Int): Flow<List<Long>> {
+        return dao.getWatchlistsForFund(fundId)
     }
 
     private fun isExpired(lastUpdated: Long): Boolean {

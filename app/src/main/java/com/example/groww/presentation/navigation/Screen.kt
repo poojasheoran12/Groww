@@ -9,6 +9,12 @@ sealed class Screen(val route: String) {
         fun createRoute(id: Int) = "details/$id"
     }
     object Search : Screen("search")
+    
+    object Watchlist : Screen("watchlist")
+    object WatchlistDetail : Screen("watchlist/{id}/{name}") {
+        fun createRoute(id: Long, name: String) = "watchlist/$id/$name"
+    }
 }
 
 const val EXPLORE_GRAPH_ROUTE = "explore_graph"
+const val WATCHLIST_GRAPH_ROUTE = "watchlist_graph"

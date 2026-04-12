@@ -42,6 +42,16 @@ fun FundDetailDto.toDomain(): FundDetails {
     )
 }
 
+fun FundDetails.toEntity(): FundEntity {
+    return FundEntity(
+        id = id,
+        name = name,
+        category = category,
+        latestNav = latestNav,
+        lastUpdated = System.currentTimeMillis()
+    )
+}
+
 fun SearchResultDto.toDomain(category: String): Fund {
     return Fund(
         id = schemeCode,

@@ -29,7 +29,8 @@ object AppModule {
             context,
             GrowwDatabase::class.java,
             "groww.db"
-        ).build()
+        ).fallbackToDestructiveMigration()
+            .build()
     }
 
     @Provides
