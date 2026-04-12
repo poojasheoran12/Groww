@@ -12,7 +12,11 @@ interface WatchlistDao {
     fun getAllWatchlists(): Flow<List<WatchlistEntity>>
 
     @Transaction
-    @Query("SELECT * FROM watchlists")
+    @Query("""
+        SELECT watchlists.* FROM watchlists 
+        LEFT JOIN watchlist_fund_cross_ref ON watchlists.id = watchlist_fund_cross_ref.watchlistId
+        GROUP BY watchlists.id
+    """)
     fun getWatchlistsWithFunds(): Flow<List<WatchlistWithFunds>>
 
     @Transaction

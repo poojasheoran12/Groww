@@ -151,12 +151,31 @@ fun ExploreScreen(
 
 @Composable
 fun SkeletonCategorySection() {
-    Column {
-        Box(modifier = Modifier.size(120.dp, 24.dp).shimmerEffect().clip(RoundedCornerShape(4.dp)))
-        Spacer(modifier = Modifier.height(16.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(modifier = Modifier.padding(bottom = 24.dp)) {
+        // Section Header Shimmer
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(modifier = Modifier.size(140.dp, 24.dp).shimmerEffect().clip(RoundedCornerShape(4.dp)))
+            Box(modifier = Modifier.size(60.dp, 20.dp).shimmerEffect().clip(RoundedCornerShape(4.dp)))
+        }
+        
+        // Fund Grid Shimmer (2x2)
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             repeat(2) {
-                Box(modifier = Modifier.weight(1f).aspectRatio(1f).shimmerEffect().clip(RoundedCornerShape(12.dp)))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    repeat(2) {
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(170.dp)
+                                .shimmerEffect()
+                                .clip(RoundedCornerShape(12.dp))
+                        )
+                    }
+                }
             }
         }
     }
