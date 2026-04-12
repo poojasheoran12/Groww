@@ -2,5 +2,5 @@ package com.example.groww.domain.model
 
 data class NavPoint(
     val date: String,
-    val nav: Float
+    val nav: Double
 )

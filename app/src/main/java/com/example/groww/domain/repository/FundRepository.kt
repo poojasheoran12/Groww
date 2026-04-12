@@ -1,14 +1,20 @@
 package com.example.groww.domain.repository
 
 import com.example.groww.domain.model.Fund
-import com.example.groww.domain.model.FundDetail
+import com.example.groww.domain.model.FundCategory
+import com.example.groww.domain.model.FundDetails
 import kotlinx.coroutines.flow.Flow
 
 interface FundRepository {
-    fun getFundsByCategory(category: String): Flow<List<Fund>>
-    suspend fun refreshExploreFunds(): Result<Unit>
-    suspend fun checkAndRefreshNav(schemeCode: Int)
-    suspend fun getFundDetails(schemeCode: Int): Result<FundDetail>
-    suspend fun searchFunds(query: String): Result<List<Fund>>
-    suspend fun cleanupOldData()
+    // For Explore (Pure Network)
+    suspend fun fetchExploreData(): Map<FundCategory, List<Fund>>
+    
+    // For View All (Room as SSOT)
+    fun getFundsByCategory(category: FundCategory): Flow<List<Fund>>
+    suspend fun syncCategoryFunds(category: FundCategory)
+    
+    suspend fun getFundDetails(id: Int, forceRefresh: Boolean = false): FundDetails
+    suspend fun searchFunds(query: String): List<Fund>
+    suspend fun cleanupExpiredData()
+    suspend fun lazyFetchNav(id: Int)
 }

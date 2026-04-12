@@ -1,12 +1,12 @@
 package com.example.groww.data.repository
 
-import com.example.groww.data.local.dao.FundDao
-import com.example.groww.data.local.entity.toDomain
-import com.example.groww.data.local.entity.toEntity
-import com.example.groww.data.remote.api.ApiService
+import com.example.groww.data.local.db.FundDao
 import com.example.groww.data.mapper.toDomain
+import com.example.groww.data.mapper.toEntity
+import com.example.groww.data.remote.api.MutualFundApi
 import com.example.groww.domain.model.Fund
-import com.example.groww.domain.model.FundDetail
+import com.example.groww.domain.model.FundCategory
+import com.example.groww.domain.model.FundDetails
 import com.example.groww.domain.repository.FundRepository
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -18,131 +18,139 @@ import javax.inject.Singleton
 
 @Singleton
 class FundRepositoryImpl @Inject constructor(
-    private val api: ApiService,
+    private val api: MutualFundApi,
     private val dao: FundDao
 ) : FundRepository {
 
+    private companion object {
+        const val CACHE_EXPIRY_MS = 24 * 60 * 60 * 1000L
+        const val MAX_MEMORY_CACHE_SIZE = 50
+    }
 
-    private val navMemoryCache = mutableMapOf<Int, String>()
+    private val memoryCache = object : LinkedHashMap<Int, FundDetails>(MAX_MEMORY_CACHE_SIZE, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Int, FundDetails>?): Boolean {
+            return size > MAX_MEMORY_CACHE_SIZE
+        }
+    }
 
-    private val CACHE_EXPIRATION_MS = 24 * 60 * 60 * 1000L // 24 Hours
+    override suspend fun fetchExploreData(): Map<FundCategory, List<Fund>> = coroutineScope {
+        val categories = FundCategory.entries.filter { it != FundCategory.SEARCH }
+        
+        categories.associateWith { category ->
+            async {
+                try {
+                    val searchResults = api.searchFunds(category.apiQuery).take(4)
+                    searchResults.map { searchResult ->
+                        async {
+                            val detailsDto = api.getFundDetails(searchResult.schemeCode)
+                            val domainDetails = detailsDto.toDomain()
+                            
+                            // Save to memory cache for later use in View All
+                            synchronized(memoryCache) {
+                                memoryCache[searchResult.schemeCode] = domainDetails
+                            }
 
-    override fun getFundsByCategory(category: String): Flow<List<Fund>> {
-        return dao.getFundsByCategory(category).map { entities ->
+                            searchResult.toDomain(category.displayName).copy(
+                                latestNav = domainDetails.latestNav
+                            )
+                        }
+                    }.awaitAll()
+                } catch (e: Exception) {
+                    emptyList()
+                }
+            }
+        }.mapValues { it.value.await() }
+    }
+
+    override fun getFundsByCategory(category: FundCategory): Flow<List<Fund>> {
+        return dao.getFundsByCategory(category.displayName).map { entities ->
             entities.map { it.toDomain() }
         }
     }
 
-    override suspend fun refreshExploreFunds(): Result<Unit> = coroutineScope {
+    override suspend fun syncCategoryFunds(category: FundCategory) {
         try {
-            val categories = listOf("Index", "Bluechip", "Tax", "Large")
-            
-
-            val deferredList = categories.map { category ->
-                async {
-                    val searchResults = api.searchFunds(category)
-                    category to searchResults.take(4)
-                }
-            }
-            
-            val results = deferredList.awaitAll()
-            
-
-            val allItems = results.flatMap { it.second }
-
-            val detailsFlow = allItems.map { fundDto ->
-                async {
-                    try {
-                        val details = api.getFundDetails(fundDto.schemeCode)
-                        val latestNav = details.data.firstOrNull()?.nav
-                        fundDto to latestNav
-                    } catch (e: Exception) {
-                        fundDto to null
+            val networkResults = api.searchFunds(category.apiQuery)
+            val entities = networkResults.map { searchResult ->
+                val existingInRoom = dao.getFundById(searchResult.schemeCode)
+                val existingInCache = synchronized(memoryCache) { memoryCache[searchResult.schemeCode] }
+                
+                searchResult.toEntity(category.displayName).copy(
+                    latestNav = existingInCache?.latestNav ?: existingInRoom?.latestNav,
+                    lastUpdated = if (existingInCache != null || existingInRoom != null) {
+                        System.currentTimeMillis()
+                    } else {
+                        System.currentTimeMillis() // Or 0 if never updated
                     }
-                }
+                )
             }
-            
-            val fundWithNavList = detailsFlow.awaitAll()
-            
-
-            results.forEach { (category, top4) ->
-                val entities = top4.map { dto ->
-                    val nav = fundWithNavList.find { it.first.schemeCode == dto.schemeCode }?.second
-                    Fund(
-                        schemeCode = dto.schemeCode,
-                        schemeName = dto.schemeName,
-                        category = category,
-                        latestNav = nav
-                    ).toEntity()
-                }
-                dao.deleteByCategory(category)
-                dao.insertFunds(entities)
-            }
-            
-            Result.success(Unit)
+            dao.upsertFunds(entities)
         } catch (e: Exception) {
-            Result.failure(e)
+            // Handle error
         }
     }
 
-    override suspend fun checkAndRefreshNav(schemeCode: Int) {
+    override suspend fun lazyFetchNav(id: Int) {
+        // 1. Check Room first (Single Source of Truth)
+        val existing = dao.getFundById(id)
+        if (existing?.latestNav != null && !isExpired(existing.lastUpdated)) return
 
-        if (navMemoryCache.containsKey(schemeCode)) return
-
-
-        val localFund = dao.getFundByCode(schemeCode)
-        if (localFund?.latestNav != null && !isCacheExpired(localFund.lastUpdated)) {
-            navMemoryCache[schemeCode] = localFund.latestNav
+        // 2. Check memory cache (already fetched in Explore but not saved to Room)
+        val memoryNav = synchronized(memoryCache) { memoryCache[id]?.latestNav }
+        if (memoryNav != null) {
+            dao.updateNavAndTimestamp(id, memoryNav, System.currentTimeMillis())
             return
         }
 
-
+        // 3. Finally, fetch from network
         try {
-            val response = api.getFundDetails(schemeCode)
+            val response = api.getFundDetails(id)
             val latestNav = response.data.firstOrNull()?.nav
-            
             if (latestNav != null) {
-                val updatedEntity = localFund?.copy(
-                    latestNav = latestNav,
-                    lastUpdated = System.currentTimeMillis()
-                ) ?: Fund(
-                    schemeCode = schemeCode,
-                    schemeName = response.meta.scheme_name,
-                    latestNav = latestNav
-                ).toEntity()
-                
-                dao.insertFund(updatedEntity)
-                navMemoryCache[schemeCode] = latestNav
+                dao.updateNavAndTimestamp(id, latestNav, System.currentTimeMillis())
             }
         } catch (e: Exception) {
-
+            // Handle error
         }
     }
 
-    override suspend fun getFundDetails(schemeCode: Int): Result<FundDetail> {
+    override suspend fun getFundDetails(id: Int, forceRefresh: Boolean): FundDetails {
+        if (!forceRefresh) {
+            synchronized(memoryCache) {
+                memoryCache[id]?.let { return it }
+            }
+        }
+
+        val detailsDto = api.getFundDetails(id)
+        val domainDetails = detailsDto.toDomain()
+
+        synchronized(memoryCache) {
+            memoryCache[id] = domainDetails
+        }
+
+        dao.updateNavAndTimestamp(
+            id = id,
+            nav = domainDetails.latestNav,
+            lastUpdated = System.currentTimeMillis()
+        )
+
+        return domainDetails
+    }
+
+    override suspend fun searchFunds(query: String): List<Fund> {
         return try {
-            val response = api.getFundDetails(schemeCode)
-            Result.success(response.toDomain())
+            api.searchFunds(query).map { it.toDomain(FundCategory.SEARCH.displayName) }
         } catch (e: Exception) {
-            Result.failure(e)
+            emptyList()
         }
     }
 
-    override suspend fun searchFunds(query: String): Result<List<Fund>> {
-        return try {
-            val response = api.searchFunds(query)
-            Result.success(response.map { it.toDomain() })
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
-    }
-
-    override suspend fun cleanupOldData() {
-        val threshold = System.currentTimeMillis() - CACHE_EXPIRATION_MS
+    override suspend fun cleanupExpiredData() {
+        val threshold = System.currentTimeMillis() - CACHE_EXPIRY_MS
         dao.deleteOldFunds(threshold)
     }
 
-    private fun isCacheExpired(lastUpdated: Long): Boolean {
-        return (System.currentTimeMillis() - lastUpdated) > CACHE_EXPIRATION_MS
+    private fun isExpired(lastUpdated: Long): Boolean {
+        return System.currentTimeMillis() - lastUpdated > CACHE_EXPIRY_MS
     }
 }

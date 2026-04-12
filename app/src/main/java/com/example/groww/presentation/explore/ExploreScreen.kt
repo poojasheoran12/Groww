@@ -1,24 +1,20 @@
 package com.example.groww.presentation.explore
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.groww.domain.model.Fund
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -26,16 +22,16 @@ import com.example.groww.domain.model.Fund
 fun ExploreScreen(
     viewModel: ExploreViewModel,
     onViewAllClick: (String) -> Unit,
-    onSearchClick: () -> Unit,
-    onFundClick: (Int) -> Unit
+    onFundClick: (Int) -> Unit,
+    onSearchClick: () -> Unit
 ) {
-    val state by viewModel.uiState.collectAsState()
-    val isRefreshing by viewModel.isRefreshing.collectAsState()
+    val exploreData by viewModel.exploreState.collectAsState()
+    val isLoading by viewModel.loadingState.collectAsState()
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Explore Mutual Funds", fontWeight = FontWeight.Bold) },
+                title = { Text("Mutual Funds") },
                 actions = {
                     IconButton(onClick = onSearchClick) {
                         Icon(Icons.Default.Search, contentDescription = "Search")
@@ -44,87 +40,75 @@ fun ExploreScreen(
             )
         }
     ) { padding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .background(MaterialTheme.colorScheme.background)
-        ) {
-            when (val resource = state) {
-                is ExploreUiState.Loading -> {
-                   CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-                }
-                is ExploreUiState.Error -> ErrorState(resource.message) { viewModel.refreshData() }
-                is ExploreUiState.Success -> {
-                    ExploreContent(
-                        categories = resource.categories,
-                        onViewAllClick = onViewAllClick,
-                        onFundClick = onFundClick
-                    )
-                }
-            }
-            
-            if (isRefreshing && state is ExploreUiState.Success) {
-                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-            }
-        }
-    }
-}
-
-@Composable
-fun ExploreContent(
-    categories: Map<String, List<Fund>>,
-    onViewAllClick: (String) -> Unit,
-    onFundClick: (Int) -> Unit
-) {
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(24.dp)
-    ) {
-        items(categories.entries.toList(), key = { it.key }) { entry ->
-            CategorySection(
-                title = entry.key,
-                funds = entry.value,
-                onViewAll = { onViewAllClick(entry.key) },
-                onFundClick = onFundClick
-            )
-        }
-    }
-}
-
-@Composable
-fun CategorySection(
-    title: String,
-    funds: List<Fund>,
-    onViewAll: () -> Unit,
-    onFundClick: (Int) -> Unit
-) {
-    Column {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(title, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-            TextButton(onClick = onViewAll) { Text("View All") }
-        }
-        Spacer(modifier = Modifier.height(8.dp))
-        val chunkedFunds = funds.chunked(2)
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            chunkedFunds.forEach { rowFunds ->
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    rowFunds.forEach { fund ->
-                        FundGridCard(
-                            modifier = Modifier.weight(1f),
-                            fund = fund,
-                            onClick = { onFundClick(fund.schemeCode) }
+        Box(modifier = Modifier.padding(padding)) {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(24.dp)
+            ) {
+                exploreData.forEach { (category, funds) ->
+                    item {
+                        CategoryHeader(
+                            title = category,
+                            onViewAllClick = { onViewAllClick(category) }
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        CategoryGrid(
+                            funds = funds,
+                            onFundClick = onFundClick
                         )
                     }
-                    if (rowFunds.size == 1) Spacer(modifier = Modifier.weight(1f))
+                }
+            }
+
+            if (isLoading) {
+                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+            }
+        }
+    }
+}
+
+@Composable
+fun CategoryHeader(
+    title: String,
+    onViewAllClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold
+        )
+        TextButton(onClick = onViewAllClick) {
+            Text("View All")
+        }
+    }
+}
+
+@Composable
+fun CategoryGrid(
+    funds: List<Fund>,
+    onFundClick: (Int) -> Unit
+) {
+    // Only 4 items as per requirement
+    val displayFunds = funds.take(4)
+    
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        displayFunds.chunked(2).forEach { rowFunds ->
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                rowFunds.forEach { fund ->
+                    FundCard(
+                        fund = fund,
+                        onClick = { onFundClick(fund.id) },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                if (rowFunds.size == 1) {
+                    Spacer(modifier = Modifier.weight(1f))
                 }
             }
         }
@@ -132,53 +116,30 @@ fun CategorySection(
 }
 
 @Composable
-fun FundGridCard(
-    modifier: Modifier,
+fun FundCard(
     fund: Fund,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = modifier
-            .height(110.dp)
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-        )
+        modifier = modifier.clickable(onClick = onClick),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
-            modifier = Modifier.padding(12.dp).fillMaxSize(),
-            verticalArrangement = Arrangement.SpaceBetween
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(
-                text = fund.schemeName,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium,
+                text = fund.name,
+                style = MaterialTheme.typography.bodyMedium,
                 maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                lineHeight = 18.sp
+                fontWeight = FontWeight.Medium
             )
-            Column {
-                Text("NAV", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(
-                    text = fund.latestNav?.let { "₹$it" } ?: "---",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
+            Text(
+                text = fund.latestNav?.let { "NAV: $it" } ?: "Fetching...",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.primary
+            )
         }
-    }
-}
-
-@Composable
-fun ErrorState(message: String, onRetry: () -> Unit) {
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(message, color = MaterialTheme.colorScheme.error)
-        Button(onClick = onRetry) { Text("Retry") }
     }
 }

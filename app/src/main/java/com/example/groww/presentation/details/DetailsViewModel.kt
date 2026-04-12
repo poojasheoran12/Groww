@@ -3,20 +3,14 @@ package com.example.groww.presentation.details
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.groww.domain.model.FundDetail
+import com.example.groww.domain.model.FundDetails
 import com.example.groww.domain.usecase.GetFundDetailsUseCase
+import com.example.groww.presentation.common.UiState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-
-sealed class DetailsUiState {
-    object Loading : DetailsUiState()
-    data class Success(val details: FundDetail) : DetailsUiState()
-    data class Error(val message: String) : DetailsUiState()
-}
 
 @HiltViewModel
 class DetailsViewModel @Inject constructor(
@@ -24,25 +18,23 @@ class DetailsViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow<DetailsUiState>(DetailsUiState.Loading)
-    val uiState: StateFlow<DetailsUiState> = _uiState.asStateFlow()
+    private val _detailsState = MutableStateFlow<UiState<FundDetails>>(UiState.Loading)
+    val detailsState = _detailsState.asStateFlow()
 
     init {
-        val schemeCode = savedStateHandle.get<Int>("id")
-        if (schemeCode != null) {
-            loadDetails(schemeCode)
-        } else {
-            _uiState.value = DetailsUiState.Error("Invalid scheme code")
-        }
+        val fundId = savedStateHandle.get<Int>("id")
+        fundId?.let { loadDetails(it) }
     }
 
-    private fun loadDetails(schemeCode: Int) {
+    private fun loadDetails(id: Int) {
         viewModelScope.launch {
-            _uiState.value = DetailsUiState.Loading
-            getFundDetailsUseCase(schemeCode).fold(
-                onSuccess = { _uiState.value = DetailsUiState.Success(it) },
-                onFailure = { _uiState.value = DetailsUiState.Error(it.message ?: "Failed to load details") }
-            )
+            _detailsState.value = UiState.Loading
+            try {
+                val details = getFundDetailsUseCase(id)
+                _detailsState.value = UiState.Success(details)
+            } catch (e: Exception) {
+                _detailsState.value = UiState.Error(e.message ?: "Failed to load details")
+            }
         }
     }
 }

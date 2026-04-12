@@ -1,4 +1,4 @@
-package com.example.groww.presentation
+package com.example.groww.presentation.navigation
 
 sealed class Screen(val route: String) {
     object Explore : Screen("explore")
@@ -10,3 +10,5 @@ sealed class Screen(val route: String) {
     }
     object Search : Screen("search")
 }
+
+const val EXPLORE_GRAPH_ROUTE = "explore_graph"

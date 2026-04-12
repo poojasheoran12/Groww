@@ -1,9 +1,11 @@
 package com.example.groww.domain.model
 
-import kotlinx.serialization.Serializable
-
-//@Serializable
-//data class FundDetail(
-//    val meta: FundMeta,
-//    val data: List<NavPoint>
-//)
+data class FundDetails(
+    val id: Int,
+    val name: String,
+    val fundHouse: String,
+    val category: String,
+    val type: String,
+    val latestNav: String,
+    val navHistory: List<NavPoint>
+)
