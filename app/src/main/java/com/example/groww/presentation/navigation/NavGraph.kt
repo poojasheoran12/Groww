@@ -141,6 +141,9 @@ fun GrowwNavGraph(navController: NavHostController) {
                         onBackClick = { navController.popBackStack() },
                         onFundClick = { fundId ->
                             navController.navigate(Screen.Details.createRoute(fundId))
+                        },
+                        onExploreClick = {
+                            navController.navigate(Screen.ViewAll.createRoute("ALL"))
                         }
                     )
                 }

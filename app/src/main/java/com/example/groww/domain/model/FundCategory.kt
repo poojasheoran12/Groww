@@ -1,6 +1,7 @@
 package com.example.groww.domain.model
 
 enum class FundCategory(val displayName: String, val apiQuery: String) {
+    ALL("All Funds", "growth"), // 'growth' matches a huge percentage of funds in India
     INDEX("Index", "index"),
     BLUECHIP("Bluechip", "bluechip"),
     TAX("Tax", "tax"),
@@ -9,7 +10,7 @@ enum class FundCategory(val displayName: String, val apiQuery: String) {
 
     companion object {
         fun fromDisplayName(name: String): FundCategory {
-            return entries.find { it.displayName == name } ?: SEARCH
+            return entries.find { it.displayName == name } ?: ALL
         }
     }
 }

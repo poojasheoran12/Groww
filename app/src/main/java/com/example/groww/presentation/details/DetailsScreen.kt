@@ -13,6 +13,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -102,12 +103,12 @@ fun DetailsScreen(
 
                         item {
                             Text(text = "NAV History", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                            Spacer(modifier = Modifier.height(8.dp))
+                            Spacer(modifier = Modifier.height(16.dp))
                             LineChart(
                                 navPoints = fund.navHistory,
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(200.dp)
+                                    .height(250.dp) // Slightly taller for axis labels
                                     .padding(vertical = 16.dp)
                             )
                         }
@@ -192,37 +193,5 @@ fun WatchlistBottomSheetContent(
                 Text(text = watchlist.name, style = MaterialTheme.typography.bodyLarge)
             }
         }
-    }
-}
-
-@Composable
-fun LineChart(
-    navPoints: List<NavPoint>,
-    modifier: Modifier = Modifier
-) {
-    if (navPoints.isEmpty()) return
-
-    val maxNav = navPoints.maxOf { it.nav }
-    val minNav = navPoints.minOf { it.nav }
-    val range = (maxNav - minNav).coerceAtLeast(0.1)
-
-    Canvas(modifier = modifier) {
-        val width = size.width
-        val height = size.height
-        val spacing = width / (navPoints.size - 1)
-
-        val path = Path().apply {
-            navPoints.forEachIndexed { index, point ->
-                val x = index * spacing
-                val y = height - ((point.nav - minNav) / range * height).toFloat()
-                if (index == 0) moveTo(x, y) else lineTo(x, y)
-            }
-        }
-
-        drawPath(
-            path = path,
-            color = Color(0xFF00D09C), // Groww Green
-            style = Stroke(width = 3.dp.toPx())
-        )
     }
 }

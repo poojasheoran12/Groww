@@ -5,7 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.groww.domain.model.Fund
 import com.example.groww.domain.model.FundCategory
-import com.example.groww.domain.repository.FundRepository
+import com.example.groww.domain.usecase.GetFundsByCategoryUseCase
 import com.example.groww.domain.usecase.GetNavUseCase
 import com.example.groww.domain.usecase.SyncCategoryUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -22,8 +22,9 @@ data class ViewAllUiState(
 
 @HiltViewModel
 class ViewAllViewModel @Inject constructor(
-    private val repository: FundRepository,
     private val syncCategoryUseCase: SyncCategoryUseCase,
+    private val getFundsByCategoryUseCase: GetFundsByCategoryUseCase,
+    private val getNavUseCase: GetNavUseCase,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -47,7 +48,7 @@ class ViewAllViewModel @Inject constructor(
     }
 
     private fun observeFunds() {
-        repository.getFundsByCategory(category)
+        getFundsByCategoryUseCase(category)
             .onEach { funds ->
                 allFunds = funds
                 updateVisibleFunds(page = _state.value.currentPage)
@@ -85,7 +86,7 @@ class ViewAllViewModel @Inject constructor(
 
     fun onItemVisible(fundId: Int) {
         viewModelScope.launch {
-            repository.lazyFetchNav(fundId)
+            getNavUseCase(fundId)
         }
     }
 }

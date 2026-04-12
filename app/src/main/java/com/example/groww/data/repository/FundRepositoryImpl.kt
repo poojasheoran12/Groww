@@ -1,15 +1,12 @@
 package com.example.groww.data.repository
 
 import com.example.groww.data.local.db.FundDao
-import com.example.groww.data.local.entity.WatchlistEntity
-import com.example.groww.data.local.entity.WatchlistFundCrossRef
 import com.example.groww.data.mapper.toDomain
 import com.example.groww.data.mapper.toEntity
 import com.example.groww.data.remote.api.MutualFundApi
 import com.example.groww.domain.model.Fund
 import com.example.groww.domain.model.FundCategory
 import com.example.groww.domain.model.FundDetails
-import com.example.groww.domain.model.Watchlist
 import com.example.groww.domain.repository.FundRepository
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -37,7 +34,7 @@ class FundRepositoryImpl @Inject constructor(
     }
 
     override suspend fun fetchExploreData(): Map<FundCategory, List<Fund>> = coroutineScope {
-        val categories = FundCategory.entries.filter { it != FundCategory.SEARCH }
+        val categories = FundCategory.entries.filter { it != FundCategory.SEARCH && it != FundCategory.ALL }
         
         categories.associateWith { category ->
             async {
@@ -139,41 +136,6 @@ class FundRepositoryImpl @Inject constructor(
     override suspend fun cleanupExpiredData() {
         val threshold = System.currentTimeMillis() - CACHE_EXPIRY_MS
         dao.deleteOldFunds(threshold)
-    }
-
-    // Watchlist Implementation
-    override fun getAllWatchlists(): Flow<List<Watchlist>> {
-        return dao.getAllWatchlists().map { entities ->
-            entities.map { it.toDomain() }
-        }
-    }
-
-    override fun getWatchlistWithFunds(id: Long): Flow<Watchlist> {
-        return dao.getWatchlistWithFunds(id).map { it.toDomain() }
-    }
-
-    override suspend fun createWatchlist(name: String): Long {
-        return dao.insertWatchlist(WatchlistEntity(name = name))
-    }
-
-    override suspend fun deleteWatchlist(id: Long) {
-        dao.deleteWatchlist(WatchlistEntity(id = id, name = ""))
-    }
-
-    override suspend fun addFundToWatchlist(fundId: Int, watchlistId: Long) {
-        dao.insertFundToWatchlist(WatchlistFundCrossRef(watchlistId, fundId))
-    }
-
-    override suspend fun removeFundFromWatchlist(fundId: Int, watchlistId: Long) {
-        dao.removeFundFromWatchlist(WatchlistFundCrossRef(watchlistId, fundId))
-    }
-
-    override fun isFundInAnyWatchlist(fundId: Int): Flow<Boolean> {
-        return dao.isFundInAnyWatchlist(fundId)
-    }
-
-    override fun getWatchlistsForFund(fundId: Int): Flow<List<Long>> {
-        return dao.getWatchlistsForFund(fundId)
     }
 
     private fun isExpired(lastUpdated: Long): Boolean {

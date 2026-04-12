@@ -1,19 +1,24 @@
 package com.example.groww.presentation.search
 
-import androidx.compose.foundation.clickable
+import androidx.compose.animation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.groww.presentation.common.UiState
-import com.example.groww.presentation.explore.FundCard
+import com.example.groww.presentation.explore.ViewAllFundItem
+import com.example.groww.ui.theme.BackgroundLight
+import com.example.groww.util.shimmerEffect
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -23,11 +28,17 @@ fun SearchScreen(
     onFundClick: (Int) -> Unit
 ) {
     val query by viewModel.searchQuery.collectAsState()
-    val state by viewModel.searchState.collectAsState()
+    val searchState by viewModel.searchState.collectAsState()
 
     Scaffold(
+        containerColor = BackgroundLight,
         topBar = {
             TopAppBar(
+                navigationIcon = {
+                    IconButton(onClick = onBackClick) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    }
+                },
                 title = {
                     TextField(
                         value = query,
@@ -35,10 +46,10 @@ fun SearchScreen(
                         placeholder = { Text("Search Mutual Funds") },
                         modifier = Modifier.fillMaxWidth(),
                         colors = TextFieldDefaults.colors(
-                            focusedContainerColor = androidx.compose.ui.graphics.Color.Transparent,
-                            unfocusedContainerColor = androidx.compose.ui.graphics.Color.Transparent,
-                            focusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent,
-                            unfocusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent
+                            focusedContainerColor = Color.Transparent,
+                            unfocusedContainerColor = Color.Transparent,
+                            focusedIndicatorColor = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent
                         ),
                         singleLine = true,
                         trailingIcon = {
@@ -50,40 +61,41 @@ fun SearchScreen(
                         }
                     )
                 },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                    }
-                }
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
             )
         }
     ) { padding ->
-        Box(modifier = Modifier.padding(padding).fillMaxSize()) {
-            when (val currentState = state) {
+        LazyColumn(
+            modifier = Modifier.padding(padding).fillMaxSize(),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            when (val state = searchState) {
                 is UiState.Loading -> {
-                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-                }
-                is UiState.Error -> {
-                    Text(text = currentState.message, modifier = Modifier.align(Alignment.Center))
+                    items(8) {
+                        Box(modifier = Modifier.fillMaxWidth().height(80.dp).shimmerEffect().clip(RoundedCornerShape(12.dp)))
+                    }
                 }
                 is UiState.Success -> {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        items(currentState.data) { fund ->
-                            FundCard(
+                    items(state.data) { fund ->
+                        AnimatedVisibility(
+                            visible = true,
+                            enter = fadeIn() + expandVertically()
+                        ) {
+                            ViewAllFundItem(
                                 fund = fund,
-                                onClick = { onFundClick(fund.id) },
-                                modifier = Modifier.fillMaxWidth()
+                                onAppear = {},
+                                onClick = { onFundClick(fund.id) }
                             )
                         }
                     }
                 }
-                is UiState.Idle -> {
-                    Text(text = "Search for Mutual Funds", modifier = Modifier.align(Alignment.Center))
+                is UiState.Error -> {
+                    item {
+                        Text(text = state.message, color = MaterialTheme.colorScheme.error)
+                    }
                 }
+                else -> {}
             }
         }
     }

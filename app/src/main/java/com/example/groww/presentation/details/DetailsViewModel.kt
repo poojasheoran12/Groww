@@ -4,9 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.groww.domain.model.FundDetails
-import com.example.groww.domain.model.Watchlist
-import com.example.groww.domain.repository.FundRepository
-import com.example.groww.domain.usecase.GetFundDetailsUseCase
+import com.example.groww.domain.usecase.*
 import com.example.groww.presentation.common.UiState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
@@ -16,7 +14,12 @@ import javax.inject.Inject
 @HiltViewModel
 class DetailsViewModel @Inject constructor(
     private val getFundDetailsUseCase: GetFundDetailsUseCase,
-    private val repository: FundRepository,
+    private val getAllWatchlistsUseCase: GetAllWatchlistsUseCase,
+    private val createWatchlistUseCase: CreateWatchlistUseCase,
+    private val addFundToWatchlistUseCase: AddFundToWatchlistUseCase,
+    private val removeFundFromWatchlistUseCase: RemoveFundFromWatchlistUseCase,
+    private val isFundInWatchlistUseCase: IsFundInWatchlistUseCase,
+    private val getWatchlistsForFundUseCase: GetWatchlistsForFundUseCase,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -25,15 +28,15 @@ class DetailsViewModel @Inject constructor(
     private val _detailsState = MutableStateFlow<UiState<FundDetails>>(UiState.Loading)
     val detailsState = _detailsState.asStateFlow()
 
-    val isInCategoryWatchlist = repository.isFundInAnyWatchlist(fundId)
+    val isInCategoryWatchlist = isFundInWatchlistUseCase(fundId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
-    val allWatchlists = repository.getAllWatchlists()
+    val allWatchlists = getAllWatchlistsUseCase()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
         
-    val activeWatchlistIds = repository.getWatchlistsForFund(fundId)
+    val activeWatchlistIds = getWatchlistsForFundUseCase(fundId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
+    
     init {
         if (fundId != -1) {
             loadDetails(fundId)
@@ -55,17 +58,17 @@ class DetailsViewModel @Inject constructor(
     fun toggleWatchlist(watchlistId: Long, isSelected: Boolean) {
         viewModelScope.launch {
             if (isSelected) {
-                repository.addFundToWatchlist(fundId, watchlistId)
+                addFundToWatchlistUseCase(fundId, watchlistId)
             } else {
-                repository.removeFundFromWatchlist(fundId, watchlistId)
+                removeFundFromWatchlistUseCase(fundId, watchlistId)
             }
         }
     }
 
     fun createAndAddToWatchlist(name: String) {
         viewModelScope.launch {
-            val id = repository.createWatchlist(name)
-            repository.addFundToWatchlist(fundId, id)
+            val id = createWatchlistUseCase(name)
+            addFundToWatchlistUseCase(fundId, id)
         }
     }
 }

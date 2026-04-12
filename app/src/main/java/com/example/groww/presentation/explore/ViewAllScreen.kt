@@ -1,19 +1,25 @@
 package com.example.groww.presentation.explore
 
+import androidx.compose.animation.*
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.groww.domain.model.Fund
+import com.example.groww.ui.theme.BackgroundLight
+import com.example.groww.ui.theme.PrimaryGreen
+import com.example.groww.util.shimmerEffect
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -26,7 +32,6 @@ fun ViewAllScreen(
     val uiState by viewModel.state.collectAsState()
     val listState = rememberLazyListState()
 
-    // Pagination detection
     LaunchedEffect(listState) {
         snapshotFlow { listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index }
             .collect { lastIndex ->
@@ -37,14 +42,16 @@ fun ViewAllScreen(
     }
 
     Scaffold(
+        containerColor = BackgroundLight,
         topBar = {
             TopAppBar(
-                title = { Text(category) },
+                title = { Text(category, fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = BackgroundLight)
             )
         }
     ) { padding ->
@@ -55,21 +62,32 @@ fun ViewAllScreen(
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                items(uiState.visibleFunds, key = { it.id }) { fund ->
-                    ViewAllFundItem(
-                        fund = fund,
-                        onAppear = { viewModel.onItemVisible(fund.id) },
-                        onClick = { onFundClick(fund.id) }
-                    )
+                if (uiState.visibleFunds.isEmpty() && uiState.isLoadingMore) {
+                    items(10) {
+                        Box(modifier = Modifier.fillMaxWidth().height(80.dp).shimmerEffect().clip(RoundedCornerShape(12.dp)))
+                    }
+                } else {
+                    items(uiState.visibleFunds, key = { it.id }) { fund ->
+                        AnimatedVisibility(
+                            visible = true,
+                            enter = fadeIn() + slideInVertically { it / 2 }
+                        ) {
+                            ViewAllFundItem(
+                                fund = fund,
+                                onAppear = { viewModel.onItemVisible(fund.id) },
+                                onClick = { onFundClick(fund.id) }
+                            )
+                        }
+                    }
                 }
 
-                if (uiState.isLoadingMore) {
+                if (uiState.isLoadingMore && uiState.visibleFunds.isNotEmpty()) {
                     item {
-                        CircularProgressIndicator(
+                        LinearProgressIndicator(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(16.dp)
-                                .wrapContentWidth(Alignment.CenterHorizontally)
+                                .padding(16.dp),
+                            color = PrimaryGreen
                         )
                     }
                 }
@@ -84,40 +102,47 @@ fun ViewAllFundItem(
     onAppear: () -> Unit,
     onClick: () -> Unit
 ) {
-    // Only fetch if missing
     LaunchedEffect(fund.id) {
         if (fund.latestNav == null) {
             onAppear()
         }
     }
 
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
+    Surface(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
     ) {
         Row(
-            modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth(),
+            modifier = Modifier.padding(16.dp).fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = fund.name,
-                    style = MaterialTheme.typography.bodyLarge,
+                    style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     maxLines = 2
                 )
+                Text(
+                    text = fund.category,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
             Spacer(modifier = Modifier.width(16.dp))
-            Text(
-                text = fund.latestNav?.let { "₹$it" } ?: "Fetching...",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.Bold
-            )
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    text = fund.latestNav?.let { "₹$it" } ?: "---",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = PrimaryGreen,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(text = "NAV", style = MaterialTheme.typography.labelSmall)
+            }
         }
     }
 }

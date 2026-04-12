@@ -11,15 +11,3 @@ class GetFundDetailsUseCase @Inject constructor(
         return repository.getFundDetails(id, forceRefresh)
     }
 }
-
-class SearchFundsUseCase @Inject constructor(
-    private val repository: FundRepository
-) {
-    suspend operator fun invoke(query: String) = repository.searchFunds(query)
-}
-
-class GetNavUseCase @Inject constructor(
-    private val repository: FundRepository
-) {
-    suspend operator fun invoke(id: Int) = repository.lazyFetchNav(id)
-}
