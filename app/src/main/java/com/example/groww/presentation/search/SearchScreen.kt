@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.example.groww.domain.model.Fund
 import com.example.groww.presentation.common.UiState
 import com.example.groww.presentation.viewAll.ViewAllFundItem
 import com.example.groww.ui.theme.BackgroundLight
@@ -83,7 +84,7 @@ fun SearchScreen(
                         ) {
                             ViewAllFundItem(
                                 fund = fund,
-                                onAppear = {},
+                                onAppear = { viewModel.onItemVisible(fund.id) },
                                 onClick = { onFundClick(fund.id) }
                             )
                         }

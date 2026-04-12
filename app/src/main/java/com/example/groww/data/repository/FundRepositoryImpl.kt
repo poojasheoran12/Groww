@@ -137,10 +137,18 @@ class FundRepositoryImpl @Inject constructor(
         // 2. Network Enhancement
         try {
             val networkResults = api.searchFunds(query)
-            val domainFunds = networkResults.map { it.toDomain(FundCategory.SEARCH.displayName) }
+            val domainFunds = networkResults.map { searchResult ->
+                // Hydrate from Room if possible
+                val existing = dao.getFundById(searchResult.schemeCode)
+                val domainFund = searchResult.toDomain(FundCategory.SEARCH.displayName)
+                
+                if (existing?.latestNav != null) {
+                    domainFund.copy(latestNav = existing.latestNav)
+                } else {
+                    domainFund
+                }
+            }
             
-            // Prioritize network results or merge if needed
-            // For now, emit network results as the "source of truth" for search
             if (domainFunds.isNotEmpty()) {
                 emit(domainFunds)
             }
