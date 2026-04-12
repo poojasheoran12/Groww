@@ -83,9 +83,16 @@ fun DetailsScreen(
                             Text(text = fund.name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                             Text(text = fund.fundHouse, style = MaterialTheme.typography.bodyLarge)
                             Spacer(modifier = Modifier.height(8.dp))
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                SuggestionChip(onClick = {}, label = { Text(fund.category) })
-                                SuggestionChip(onClick = {}, label = { Text(fund.type) })
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                SuggestionChip(
+                                    onClick = {}, 
+                                    label = { Text(fund.category) },
+                                    modifier = Modifier.padding(end = 8.dp)
+                                )
+                                SuggestionChip(
+                                    onClick = {}, 
+                                    label = { Text(fund.type) }
+                                )
                             }
                         }
 

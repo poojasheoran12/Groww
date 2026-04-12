@@ -17,8 +17,8 @@ class WatchlistRepositoryImpl @Inject constructor(
 ) : WatchlistRepository {
 
     override fun getAllWatchlists(): Flow<List<Watchlist>> {
-        return dao.getAllWatchlists().map { entities ->
-            entities.map { it.toDomain() }
+        return dao.getWatchlistsWithFunds().map { list ->
+            list.map { it.toDomain() }
         }
     }
 
