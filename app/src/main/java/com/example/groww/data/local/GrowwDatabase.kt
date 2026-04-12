@@ -5,7 +5,7 @@ import androidx.room.RoomDatabase
 import com.example.groww.data.local.dao.FundDao
 import com.example.groww.data.local.entity.FundEntity
 
-@Database(entities = [FundEntity::class], version = 1, exportSchema = false)
+@Database(entities = [FundEntity::class], version = 2, exportSchema = false)
 abstract class GrowwDatabase : RoomDatabase() {
     abstract val fundDao: FundDao
 

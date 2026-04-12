@@ -22,7 +22,8 @@ object DatabaseModule {
             context,
             GrowwDatabase::class.java,
             GrowwDatabase.DATABASE_NAME
-        ).build()
+        ).fallbackToDestructiveMigration()
+            .build()
     }
 
     @Provides

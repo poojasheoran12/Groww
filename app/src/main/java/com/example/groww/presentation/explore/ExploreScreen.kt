@@ -1,38 +1,45 @@
 package com.example.groww.presentation.explore
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.groww.domain.model.FundWithNav
+import com.example.groww.domain.model.Fund
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExploreScreen(
     viewModel: ExploreViewModel,
-    onViewAllClick: (String) -> Unit
+    onViewAllClick: (String) -> Unit,
+    onSearchClick: () -> Unit,
+    onFundClick: (Int) -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
+    val isRefreshing by viewModel.isRefreshing.collectAsState()
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { 
-                    Text(
-                        "Explore Mutual Funds", 
-                        fontWeight = FontWeight.Bold 
-                    ) 
+                title = { Text("Explore Mutual Funds", fontWeight = FontWeight.Bold) },
+                actions = {
+                    IconButton(onClick = onSearchClick) {
+                        Icon(Icons.Default.Search, contentDescription = "Search")
+                    }
                 }
             )
         }
@@ -45,20 +52,20 @@ fun ExploreScreen(
         ) {
             when (val resource = state) {
                 is ExploreUiState.Loading -> {
-                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                   CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
                 }
-                is ExploreUiState.Error -> {
-                    ErrorState(resource.message) { viewModel.loadExploreData() }
-                }
-                is ExploreUiState.Empty -> {
-                    Text("No funds found", modifier = Modifier.align(Alignment.Center))
-                }
+                is ExploreUiState.Error -> ErrorState(resource.message) { viewModel.refreshData() }
                 is ExploreUiState.Success -> {
                     ExploreContent(
                         categories = resource.categories,
-                        onViewAllClick = onViewAllClick
+                        onViewAllClick = onViewAllClick,
+                        onFundClick = onFundClick
                     )
                 }
+            }
+            
+            if (isRefreshing && state is ExploreUiState.Success) {
+                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
             }
         }
     }
@@ -66,19 +73,21 @@ fun ExploreScreen(
 
 @Composable
 fun ExploreContent(
-    categories: Map<String, List<FundWithNav>>,
-    onViewAllClick: (String) -> Unit
+    categories: Map<String, List<Fund>>,
+    onViewAllClick: (String) -> Unit,
+    onFundClick: (Int) -> Unit
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
-        items(categories.entries.toList()) { entry ->
+        items(categories.entries.toList(), key = { it.key }) { entry ->
             CategorySection(
                 title = entry.key,
                 funds = entry.value,
-                onViewAll = { onViewAllClick(entry.key) }
+                onViewAll = { onViewAllClick(entry.key) },
+                onFundClick = onFundClick
             )
         }
     }
@@ -87,8 +96,9 @@ fun ExploreContent(
 @Composable
 fun CategorySection(
     title: String,
-    funds: List<FundWithNav>,
-    onViewAll: () -> Unit
+    funds: List<Fund>,
+    onViewAll: () -> Unit,
+    onFundClick: (Int) -> Unit
 ) {
     Column {
         Row(
@@ -96,19 +106,10 @@ fun CategorySection(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                title, 
-                fontSize = 18.sp, 
-                fontWeight = FontWeight.Bold
-            )
-            TextButton(onClick = onViewAll) {
-                Text("View All")
-            }
+            Text(title, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            TextButton(onClick = onViewAll) { Text("View All") }
         }
-        
         Spacer(modifier = Modifier.height(8.dp))
-
-        // Simulated 2-column Grid (Max 4 items)
         val chunkedFunds = funds.chunked(2)
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             chunkedFunds.forEach { rowFunds ->
@@ -116,15 +117,14 @@ fun CategorySection(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    rowFunds.forEach { fundWithNav ->
+                    rowFunds.forEach { fund ->
                         FundGridCard(
                             modifier = Modifier.weight(1f),
-                            fundWithNav = fundWithNav
+                            fund = fund,
+                            onClick = { onFundClick(fund.schemeCode) }
                         )
                     }
-                    if (rowFunds.size == 1) {
-                        Spacer(modifier = Modifier.weight(1f))
-                    }
+                    if (rowFunds.size == 1) Spacer(modifier = Modifier.weight(1f))
                 }
             }
         }
@@ -134,38 +134,34 @@ fun CategorySection(
 @Composable
 fun FundGridCard(
     modifier: Modifier,
-    fundWithNav: FundWithNav
+    fund: Fund,
+    onClick: () -> Unit
 ) {
     Card(
-        modifier = modifier.height(110.dp),
+        modifier = modifier
+            .height(110.dp)
+            .clickable(onClick = onClick),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
         )
     ) {
         Column(
-            modifier = Modifier
-                .padding(12.dp)
-                .fillMaxSize(),
+            modifier = Modifier.padding(12.dp).fillMaxSize(),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
-                text = fundWithNav.fund.schemeName,
+                text = fund.schemeName,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
                 lineHeight = 18.sp
             )
-            
             Column {
+                Text("NAV", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(
-                    "NAV", 
-                    fontSize = 10.sp, 
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    text = fundWithNav.latestNav?.let { "₹$it" } ?: "---",
+                    text = fund.latestNav?.let { "₹$it" } ?: "---",
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary

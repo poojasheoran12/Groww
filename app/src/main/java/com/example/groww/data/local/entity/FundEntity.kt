@@ -8,22 +8,26 @@ import com.example.groww.domain.model.Fund
 data class FundEntity(
     @PrimaryKey val schemeCode: Int,
     val schemeName: String,
-    val category: String,
-    val latestNav: String? = null
+    val category: String? = null,
+    val latestNav: String? = null,
+    val lastUpdated: Long = System.currentTimeMillis()
 )
 
 fun FundEntity.toDomain(): Fund {
     return Fund(
         schemeCode = schemeCode,
-        schemeName = schemeName
+        schemeName = schemeName,
+        category = category,
+        latestNav = latestNav
     )
 }
 
-fun Fund.toEntity(category: String): FundEntity {
+fun Fund.toEntity(overrideCategory: String? = null, overrideNav: String? = null): FundEntity {
     return FundEntity(
         schemeCode = schemeCode,
         schemeName = schemeName,
-        category = category,
-        latestNav = null // NAV is cached in ViewModel as per requirements
+        category = overrideCategory ?: category,
+        latestNav = overrideNav ?: latestNav,
+        lastUpdated = System.currentTimeMillis()
     )
 }

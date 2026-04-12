@@ -2,12 +2,13 @@ package com.example.groww.domain.usecase
 
 import com.example.groww.domain.model.Fund
 import com.example.groww.domain.repository.FundRepository
+import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 
-class GetCategoryFundsUseCase @Inject constructor(
+class GetFundsByCategoryUseCase @Inject constructor(
     private val repository: FundRepository
 ) {
-    suspend operator fun invoke(category: String): Result<List<Fund>> {
-        return repository.getCategoryFunds(category)
+    operator fun invoke(category: String): Flow<List<Fund>> {
+        return repository.getFundsByCategory(category)
     }
 }

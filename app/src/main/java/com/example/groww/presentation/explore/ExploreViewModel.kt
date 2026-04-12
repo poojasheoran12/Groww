@@ -2,87 +2,70 @@ package com.example.groww.presentation.explore
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.groww.domain.model.FundWithNav
-import com.example.groww.domain.usecase.GetCategoryFundsUseCase
-import com.example.groww.domain.usecase.GetFundDetailsUseCase
+import com.example.groww.domain.model.Fund
+import com.example.groww.domain.usecase.CheckAndRefreshNavUseCase
+import com.example.groww.domain.usecase.CleanupOldDataUseCase
+import com.example.groww.domain.usecase.GetFundsByCategoryUseCase
+import com.example.groww.domain.usecase.RefreshExploreFundsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 sealed class ExploreUiState {
     object Loading : ExploreUiState()
-    data class Success(val categories: Map<String, List<FundWithNav>>) : ExploreUiState()
+    data class Success(val categories: Map<String, List<Fund>>) : ExploreUiState()
     data class Error(val message: String) : ExploreUiState()
-    object Empty : ExploreUiState()
 }
 
 @HiltViewModel
 class ExploreViewModel @Inject constructor(
-    private val getCategoryFundsUseCase: GetCategoryFundsUseCase,
-    private val getFundDetailsUseCase: GetFundDetailsUseCase
+    private val getFundsByCategoryUseCase: GetFundsByCategoryUseCase,
+    private val refreshExploreFundsUseCase: RefreshExploreFundsUseCase,
+    private val checkAndRefreshNavUseCase: CheckAndRefreshNavUseCase,
+    private val cleanupOldDataUseCase: CleanupOldDataUseCase
 ) : ViewModel() {
 
-    private val categories = listOf(
-        "Index Funds",
-        "Bluechip Funds",
-        "Tax Saver (ELSS)",
-        "Large Cap Funds"
+    private val categories = listOf("Index", "Bluechip", "Tax", "Large")
+
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing = _isRefreshing.asStateFlow()
+
+    val uiState: StateFlow<ExploreUiState> = combine(
+        categories.map { category ->
+            getFundsByCategoryUseCase(category)
+        }
+    ) { categoryData ->
+        val dataMap = categories.zip(categoryData.toList()).toMap()
+        if (dataMap.values.all { it.isEmpty() }) {
+            ExploreUiState.Loading
+        } else {
+            ExploreUiState.Success(dataMap)
+        }
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = ExploreUiState.Loading
     )
 
-    private val _uiState = MutableStateFlow<ExploreUiState>(ExploreUiState.Loading)
-    val uiState: StateFlow<ExploreUiState> = _uiState.asStateFlow()
-
-    // Internal cache for NAV values as requested
-    private val navCache = mutableMapOf<Int, String>()
-
     init {
-        loadExploreData()
+        viewModelScope.launch {
+            cleanupOldDataUseCase()
+        }
+        refreshData()
     }
 
-    fun loadExploreData() {
+    fun refreshData() {
         viewModelScope.launch {
-            _uiState.value = ExploreUiState.Loading
-            try {
-                val discoveryData = coroutineScope {
-                    categories.map { category ->
-                        async {
-                            val fundsResult = getCategoryFundsUseCase(category)
-                            val funds = fundsResult.getOrNull()?.take(4) ?: emptyList()
-                            
-                            // Fetch NAV for these 4 funds in parallel
-                            val fundsWithNav = funds.map { fund ->
-                                async {
-                                    val cachedNav = navCache[fund.schemeCode]
-                                    if (cachedNav != null) {
-                                        FundWithNav(fund, cachedNav)
-                                    } else {
-                                        val detailsResult = getFundDetailsUseCase(fund.schemeCode)
-                                        val latestNav = detailsResult.getOrNull()?.data?.firstOrNull()?.nav
-                                        latestNav?.let { navCache[fund.schemeCode] = it }
-                                        FundWithNav(fund, latestNav)
-                                    }
-                                }
-                            }.awaitAll()
-                            
-                            category to fundsWithNav
-                        }
-                    }.awaitAll().toMap()
-                }
+            _isRefreshing.value = true
+            refreshExploreFundsUseCase()
+            _isRefreshing.value = false
+        }
+    }
 
-                if (discoveryData.values.all { it.isEmpty() }) {
-                    _uiState.value = ExploreUiState.Empty
-                } else {
-                    _uiState.value = ExploreUiState.Success(discoveryData)
-                }
-            } catch (e: Exception) {
-                _uiState.value = ExploreUiState.Error(e.message ?: "An unknown error occurred")
-            }
+    fun onFundVisible(schemeCode: Int) {
+        viewModelScope.launch {
+            checkAndRefreshNavUseCase(schemeCode)
         }
     }
 }

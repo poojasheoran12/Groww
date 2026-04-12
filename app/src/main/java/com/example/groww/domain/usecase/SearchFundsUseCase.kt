@@ -4,10 +4,10 @@ import com.example.groww.domain.model.Fund
 import com.example.groww.domain.repository.FundRepository
 import javax.inject.Inject
 
-class GetCategoryFundsUseCase @Inject constructor(
+class SearchFundsUseCase @Inject constructor(
     private val repository: FundRepository
 ) {
-    suspend operator fun invoke(category: String): Result<List<Fund>> {
-        return repository.getCategoryFunds(category)
+    suspend operator fun invoke(query: String): Result<List<Fund>> {
+        return repository.searchFunds(query)
     }
 }

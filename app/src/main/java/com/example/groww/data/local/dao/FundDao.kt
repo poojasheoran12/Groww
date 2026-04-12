@@ -9,12 +9,21 @@ interface FundDao {
     @Query("SELECT * FROM funds WHERE category = :category")
     fun getFundsByCategory(category: String): Flow<List<FundEntity>>
 
+    @Query("SELECT * FROM funds WHERE schemeCode = :schemeCode")
+    suspend fun getFundByCode(schemeCode: Int): FundEntity?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertFunds(funds: List<FundEntity>)
 
-    @Query("UPDATE funds SET latestNav = :nav WHERE schemeCode = :schemeCode")
-    suspend fun updateNav(schemeCode: Int, nav: String)
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertFund(fund: FundEntity)
 
     @Query("DELETE FROM funds WHERE category = :category")
-    suspend fun deleteFundsByCategory(category: String)
+    suspend fun deleteByCategory(category: String)
+
+    @Query("DELETE FROM funds WHERE lastUpdated < :threshold")
+    suspend fun deleteOldFunds(threshold: Long)
+
+    @Query("DELETE FROM funds")
+    suspend fun clearAll()
 }
