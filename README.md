@@ -11,32 +11,6 @@ A high-performance Mutual Funds tracking application built with **Clean Architec
 
 The app follows a strict **Clean Architecture** pattern, ensuring separation of concerns, high testability, and a robust data synchronization strategy.
 
-### High-Level Data Flow (Single Source of Truth)
-
-```mermaid
-graph TD
-    A[Remote API - Retrofit] -- Fetch --> B[Repository]
-    B -- Sync/Upsert --> C[Local DB - Room]
-    C -- Observe as Flow --> D[Domain UseCase]
-    D -- Collect State --> E[ViewModel]
-    E -- UI State --> F[Compose View]
-    
-    subgraph "Data Layer"
-    A
-    B
-    C
-    end
-    
-    subgraph "Domain Layer"
-    D
-    end
-    
-    subgraph "Presentation Layer"
-    E
-    F
-    end
-```
-
 ### Layer Responsibilities:
 *   **Data Layer**: Manages data orchestration between Retrofit (API) and Room (Local DB). Implements a three-layer caching strategy: Memory -> Room -> Network.
 *   **Domain Layer**: Contains the core business logic (`UseCases`) and Pure Kotlin entities. It is 100% independent of the UI and Android framework.
