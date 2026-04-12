@@ -128,11 +128,24 @@ class FundRepositoryImpl @Inject constructor(
         return domainDetails
     }
 
-    override suspend fun searchFunds(query: String): List<Fund> {
-        return try {
-            api.searchFunds(query).map { it.toDomain(FundCategory.SEARCH.displayName) }
+    override fun searchFunds(query: String): Flow<List<Fund>> = flow {
+        // 1. Instant Local Search
+        val localEntities = dao.searchFundsInRoom("%$query%")
+        val localFunds = localEntities.map { it.toDomain() }
+        emit(localFunds)
+
+        // 2. Network Enhancement
+        try {
+            val networkResults = api.searchFunds(query)
+            val domainFunds = networkResults.map { it.toDomain(FundCategory.SEARCH.displayName) }
+            
+            // Prioritize network results or merge if needed
+            // For now, emit network results as the "source of truth" for search
+            if (domainFunds.isNotEmpty()) {
+                emit(domainFunds)
+            }
         } catch (e: Exception) {
-            emptyList()
+            // Keep existing local results if network fails
         }
     }
 

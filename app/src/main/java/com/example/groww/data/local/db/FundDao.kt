@@ -12,6 +12,9 @@ interface FundDao {
     @Query("SELECT * FROM funds WHERE category = :category")
     fun getFundsByCategory(category: String): Flow<List<FundEntity>>
 
+    @Query("SELECT * FROM funds WHERE name LIKE :query OR category LIKE :query")
+    suspend fun searchFundsInRoom(query: String): List<FundEntity>
+
     @Query("SELECT * FROM funds WHERE id = :id")
     suspend fun getFundById(id: Int): FundEntity?
 

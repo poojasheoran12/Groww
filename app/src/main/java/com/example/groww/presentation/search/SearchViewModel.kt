@@ -25,11 +25,11 @@ class SearchViewModel @Inject constructor(
 
     init {
         _searchQuery
-            .debounce(500L)
+            .debounce(300L) // Optimized debounce for production responsiveness
             .distinctUntilChanged()
             .onEach { query ->
-                if (query.length >= 2) {
-                    performSearch(query)
+                if (query.trim().length >= 2) {
+                    performSearch(query.trim())
                 } else {
                     _searchState.value = UiState.Idle
                 }
@@ -44,12 +44,16 @@ class SearchViewModel @Inject constructor(
     private fun performSearch(query: String) {
         viewModelScope.launch {
             _searchState.value = UiState.Loading
-            try {
-                val results = searchFundsUseCase(query)
-                _searchState.value = UiState.Success(results)
-            } catch (e: Exception) {
-                _searchState.value = UiState.Error(e.message ?: "Search failed")
-            }
+            searchFundsUseCase(query)
+                .onEach { results ->
+                    if (results.isNotEmpty()) {
+                        _searchState.value = UiState.Success(results)
+                    }
+                }
+                .catch { e ->
+                    _searchState.value = UiState.Error(e.message ?: "Search failed")
+                }
+                .collect()
         }
     }
 }

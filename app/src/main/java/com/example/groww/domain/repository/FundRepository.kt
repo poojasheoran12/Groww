@@ -11,7 +11,7 @@ interface FundRepository {
     fun getFundsByCategory(category: FundCategory): Flow<List<Fund>>
     suspend fun syncCategoryFunds(category: FundCategory)
     suspend fun getFundDetails(id: Int, forceRefresh: Boolean = false): FundDetails
-    suspend fun searchFunds(query: String): List<Fund>
+    fun searchFunds(query: String): Flow<List<Fund>>
     suspend fun cleanupExpiredData()
     suspend fun lazyFetchNav(id: Int)
 }
