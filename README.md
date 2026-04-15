@@ -27,7 +27,7 @@ The app follows a strict **Clean Architecture** pattern, ensuring separation of 
 | **Bottom Sheet** | ✅ | Multi-folder Selection + New Folder Creation |
 | **Search** | ✅ | Debounced (300ms) Global Fund Discovery |
 | **Architecture** | ✅ | MVVM + Clean Architecture + Hilt DI |
-| **Persistence** | ✅ | Room (SSOT) + Local Caching |
+| **Persistence** | ✅ | Room  + Local Caching |
 | **Theme** | ✅ | Dynamic Light/Dark Mode Support |
 | **Testing** | ✅ | Unit Tests (MockK, Truth, Turbine) |
 | **Visuals** | ✅ | Shimmer Loading + Subtle Transitions |
@@ -39,8 +39,8 @@ The app follows a strict **Clean Architecture** pattern, ensuring separation of 
 
 One of the project's core objectives was to eliminate the common "lag" found in financial apps through advanced coroutine orchestration.
 
-*   **Parallel Job Orchestration**: The `syncExploreFunds` logic uses `async/awaitAll` to fetch 5+ fund categories simultaneously without blocking the main thread.
-*   **Proactive NAV Fetching**: Instead of waiting for detail screens, the app proactively fetches NAV (Net Asset Value) prices in the background for search results, ensuring the UI is populated before the user even clicks.
+*   **Parallel Job Orchestration**: The `syncExploreFunds` logic uses `async/awaitAll` to fetch 4+ fund categories simultaneously without blocking the main thread.
+*   ** NAV Fetching**: NAV is fetched only for items currently VISIBLE on the screen, rather than for all search results..
 *   **Reactive Search**: Search results are observed directly from the Room database. This means as soon as background price updates arrive from the network, the search list updates instantly without a manual refresh.
 
 ---
@@ -74,7 +74,7 @@ One of the project's core objectives was to eliminate the common "lag" found in 
 
 ## 🎨 Design & UX
 *   **Dynamic Dark Mode**: A premium dark theme tailored for financial clarity (`#0D0D0D` background).
-*   **Interactive Charts**: Custom-built Bézier curve charts for NAV history, featuring smooth interaction tooltips and grid systems.
+*   **Interactive Charts**: Custom-built curve charts for NAV history, featuring smooth interaction tooltips and grid systems.
 *   **Micro-animations**: Leverages `AnimatedVisibility` and `Crossfade` for sleek state transitions.
 
 ---
