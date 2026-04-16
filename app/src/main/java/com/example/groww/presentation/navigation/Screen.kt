@@ -1,8 +1,6 @@
 package com.example.groww.presentation.navigation
 
-/**
- * Navigation Architecture Constants
- */
+
 object Graph {
     const val ROOT = "root_graph"
     const val EXPLORE = "explore_graph"
@@ -10,11 +8,11 @@ object Graph {
 }
 
 sealed class Screen(val route: String) {
-    // Bottom Bar Screens
+  
     data object Explore : Screen("explore_home")
     data object Watchlist : Screen("watchlist_home")
     
-    // Feature Screens
+   
     data object Search : Screen("search_screen")
     
     data object ViewAll : Screen("view_all/{category}") {
