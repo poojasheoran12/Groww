@@ -12,6 +12,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -20,6 +21,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.groww.presentation.explore.FundCard
 import com.example.groww.ui.theme.PrimaryGreen
+import com.example.groww.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -101,7 +103,7 @@ fun EmptyFolderState(onExploreClick: () -> Unit) {
         Spacer(modifier = Modifier.height(32.dp))
         
         Text(
-            text = "No funds added yet",
+            text = stringResource(R.string.no_funds_added),
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onBackground
@@ -110,7 +112,7 @@ fun EmptyFolderState(onExploreClick: () -> Unit) {
         Spacer(modifier = Modifier.height(12.dp))
         
         Text(
-            text = "Explore the market and save funds into this portfolio.",
+            text = stringResource(R.string.explore_market_desc),
             style = MaterialTheme.typography.bodyLarge,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -131,7 +133,7 @@ fun EmptyFolderState(onExploreClick: () -> Unit) {
             )
         ) {
             Text(
-                text = "Explore Funds",
+                text = stringResource(R.string.explore_funds_btn),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )

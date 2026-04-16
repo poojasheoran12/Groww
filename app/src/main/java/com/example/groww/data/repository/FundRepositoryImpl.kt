@@ -129,7 +129,7 @@ class FundRepositoryImpl @Inject constructor(
         emit(localFunds)
 
         val networkResults = api.searchFunds(query)
-        val ids = networkResults.map { searchResult.schemeCode }
+        val ids = networkResults.map { it.schemeCode }
         
         val entities = networkResults.map { searchResult ->
             val existing = dao.getFundById(searchResult.schemeCode)
