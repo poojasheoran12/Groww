@@ -51,7 +51,7 @@ fun MainScreen(navController: NavHostController = rememberNavController()) {
             exploreNavGraph(navController)
             watchlistNavGraph(navController)
             
-            // Shared/Common Routes
+           
             composable(
                 route = Screen.Details.route,
                 arguments = listOf(navArgument(Screen.ARG_FUND_ID) { type = NavType.IntType })
@@ -73,9 +73,7 @@ fun MainScreen(navController: NavHostController = rememberNavController()) {
     }
 }
 
-/**
- * Explore Feature Graph
- */
+
 fun NavGraphBuilder.exploreNavGraph(navController: NavHostController) {
     navigation(startDestination = Screen.Explore.route, route = Graph.EXPLORE) {
         composable(Screen.Explore.route) {
@@ -105,9 +103,7 @@ fun NavGraphBuilder.exploreNavGraph(navController: NavHostController) {
     }
 }
 
-/**
- * Watchlist Feature Graph
- */
+
 fun NavGraphBuilder.watchlistNavGraph(navController: NavHostController) {
     navigation(startDestination = Screen.Watchlist.route, route = Graph.WATCHLIST) {
         composable(Screen.Watchlist.route) {
