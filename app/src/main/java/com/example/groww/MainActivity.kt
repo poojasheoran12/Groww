@@ -6,11 +6,15 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.rememberNavController
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import com.example.groww.presentation.navigation.GrowwNavGraph
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.groww.presentation.ThemeViewModel
+import com.example.groww.presentation.navigation.MainScreen
 import com.example.groww.ui.theme.GrowwTheme
 import dagger.hilt.android.AndroidEntryPoint
 @AndroidEntryPoint
@@ -34,7 +38,7 @@ fun App() {
             color = MaterialTheme.colorScheme.background
         ) {
             val navController = rememberNavController()
-            GrowwNavGraph(navController = navController)
+            MainScreen(navController = navController)
         }
     }
 }

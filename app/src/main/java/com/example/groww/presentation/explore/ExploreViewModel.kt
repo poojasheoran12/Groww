@@ -2,7 +2,6 @@ package com.example.groww.presentation.explore
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.groww.domain.model.Fund
 import com.example.groww.domain.usecase.GetExploreFundsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
@@ -14,33 +13,36 @@ class ExploreViewModel @Inject constructor(
     private val getExploreFundsUseCase: GetExploreFundsUseCase
 ) : ViewModel() {
 
-    private val _loadingState = MutableStateFlow(false)
-    val loadingState = _loadingState.asStateFlow()
-
-    val exploreState: StateFlow<Map<String, List<Fund>>> = getExploreFundsUseCase()
-        .map { data -> 
-            data.mapKeys { it.key.displayName } 
-        }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = emptyMap()
-        )
+    private val _uiState = MutableStateFlow(ExploreUiState())
+    val uiState: StateFlow<ExploreUiState> = _uiState.asStateFlow()
 
     init {
+        observeData()
         refreshData()
+    }
+
+    private fun observeData() {
+        getExploreFundsUseCase()
+            .onEach { data ->
+                _uiState.update { it.copy(
+                    categories = data.mapKeys { entry -> entry.key.displayName },
+                    isLoading = false
+                )}
+            }
+            .launchIn(viewModelScope)
     }
 
     fun refreshData() {
         viewModelScope.launch {
-            _loadingState.value = true
+            _uiState.update { it.copy(isLoading = true, error = null) }
             try {
                 getExploreFundsUseCase.cleanup()
                 getExploreFundsUseCase.sync()
             } catch (e: Exception) {
-                // Background sync error, UI will still show cached DB data
-            } finally {
-                _loadingState.value = false
+                _uiState.update { it.copy(
+                    error = e.message ?: "Unknown error occurred",
+                    isLoading = false
+                )}
             }
         }
     }

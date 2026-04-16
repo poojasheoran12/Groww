@@ -2,10 +2,8 @@ package com.example.groww.presentation.search
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.groww.domain.model.Fund
 import com.example.groww.domain.usecase.GetNavUseCase
 import com.example.groww.domain.usecase.SearchFundsUseCase
-import com.example.groww.presentation.common.UiState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.*
@@ -19,43 +17,41 @@ class SearchViewModel @Inject constructor(
     private val getNavUseCase: GetNavUseCase
 ) : ViewModel() {
 
-    private val _searchQuery = MutableStateFlow("")
-    val searchQuery = _searchQuery.asStateFlow()
+    private val _uiState = MutableStateFlow(SearchUiState())
+    val uiState: StateFlow<SearchUiState> = _uiState.asStateFlow()
 
-    private val _searchState = MutableStateFlow<UiState<List<Fund>>>(UiState.Idle)
-    val searchState = _searchState.asStateFlow()
+    private val queryFlow = MutableStateFlow("")
 
     init {
-        _searchQuery
+        queryFlow
             .debounce(300L)
             .distinctUntilChanged()
             .onEach { query ->
-                if (query.trim().length >= 2) {
-                    performSearch(query.trim())
+                if (query.length >= 2) {
+                    performSearch(query)
                 } else {
-                    _searchState.value = UiState.Idle
+                    _uiState.update { it.copy(results = emptyList(), isIdle = true, isLoading = false) }
                 }
             }
             .launchIn(viewModelScope)
     }
 
     fun onQueryChange(newQuery: String) {
-        _searchQuery.value = newQuery
+        queryFlow.value = newQuery
+        _uiState.update { it.copy(query = newQuery, error = null) }
     }
 
     private fun performSearch(query: String) {
         viewModelScope.launch {
-            _searchState.value = UiState.Loading
+            _uiState.update { it.copy(isLoading = true, isIdle = false) }
             searchFundsUseCase(query)
-                .onEach { results ->
-                    if (results.isNotEmpty()) {
-                        _searchState.value = UiState.Success(results)
-                    }
-                }
                 .catch { e ->
-                    _searchState.value = UiState.Error(e.message ?: "Search failed")
+                    _uiState.update { it.copy(error = e.message ?: "Search failed", isLoading = false) }
                 }
-                .collect()
+                .onEach { results ->
+                    _uiState.update { it.copy(results = results, isLoading = false) }
+                }
+                .launchIn(viewModelScope)
         }
     }
 

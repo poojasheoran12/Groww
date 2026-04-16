@@ -12,17 +12,49 @@ import javax.inject.Inject
 
 @HiltViewModel
 class WatchlistViewModel @Inject constructor(
-    getAllWatchlistsUseCase: GetAllWatchlistsUseCase,
+    private val getAllWatchlistsUseCase: GetAllWatchlistsUseCase,
     private val createWatchlistUseCase: CreateWatchlistUseCase,
     private val deleteWatchlistUseCase: DeleteWatchlistUseCase
 ) : ViewModel() {
 
-    val watchlists = getAllWatchlistsUseCase()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    private val _uiState = MutableStateFlow(WatchlistUiState())
+    val uiState: StateFlow<WatchlistUiState> = _uiState.asStateFlow()
 
-    fun createWatchlist(name: String) {
+    init {
+        observeWatchlists()
+    }
+
+    private fun observeWatchlists() {
+        getAllWatchlistsUseCase()
+            .onEach { list ->
+                _uiState.update { it.copy(watchlists = list, isLoading = false) }
+            }
+            .launchIn(viewModelScope)
+    }
+
+    fun onAddClick() {
+        _uiState.update { it.copy(showAddDialog = true) }
+    }
+
+    fun onDismissDialog() {
+        _uiState.update { it.copy(showAddDialog = false, newWatchlistName = "") }
+    }
+
+    fun onNameChange(name: String) {
+        _uiState.update { it.copy(newWatchlistName = name) }
+    }
+
+    fun createWatchlist() {
+        val name = _uiState.value.newWatchlistName
+        if (name.isBlank()) return
+
         viewModelScope.launch {
-            createWatchlistUseCase(name)
+            try {
+                createWatchlistUseCase(name)
+                onDismissDialog()
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = e.message ?: "Failed to create portfolio") }
+            }
         }
     }
 

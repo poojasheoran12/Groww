@@ -14,13 +14,6 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-data class ViewAllUiState(
-    val visibleFunds: List<Fund> = emptyList(),
-    val currentPage: Int = 0,
-    val isLoadingMore: Boolean = false,
-    val isEndOfList: Boolean = false
-)
-
 @HiltViewModel
 class ViewAllViewModel @Inject constructor(
     private val syncCategoryUseCase: SyncCategoryUseCase,
@@ -33,56 +26,65 @@ class ViewAllViewModel @Inject constructor(
     private val categoryName: String = savedStateHandle[Screen.ARG_CATEGORY] ?: FundCategory.ALL.name
     private val category = try { FundCategory.valueOf(categoryName) } catch (e: Exception) { FundCategory.ALL }
 
-    private val _state = MutableStateFlow(ViewAllUiState())
-    val state = _state.asStateFlow()
+    private val _uiState = MutableStateFlow(ViewAllUiState())
+    val uiState: StateFlow<ViewAllUiState> = _uiState.asStateFlow()
 
     private var allFunds: List<Fund> = emptyList()
 
     init {
-        // First sync with network and save to Room (shells only)
-        viewModelScope.launch {
-            syncCategoryUseCase(category)
-        }
-        
-        // Then observe Room as Single Source of Truth
         observeFunds()
+        refreshData()
     }
 
     private fun observeFunds() {
         getFundsByCategoryUseCase(category)
             .onEach { funds ->
                 allFunds = funds
-                updateVisibleFunds(page = _state.value.currentPage)
+                if (funds.isNotEmpty()) {
+                    updateVisibleFunds(page = 0)
+                } else if (_uiState.value.isLoading.not()) {
+                    _uiState.update { it.copy(isLoading = false, visibleFunds = emptyList()) }
+                }
             }
             .launchIn(viewModelScope)
     }
 
+    fun refreshData() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = allFunds.isEmpty(), error = null) }
+            try {
+                syncCategoryUseCase(category)
+            } catch (e: Exception) {
+                if (allFunds.isEmpty()) {
+                    _uiState.update { it.copy(error = e.message ?: "Failed to load funds", isLoading = false) }
+                }
+            } finally {
+                _uiState.update { it.copy(isLoading = false) }
+            }
+        }
+    }
+
     fun loadNextPage() {
-        if (_state.value.isLoadingMore || _state.value.isEndOfList) return
+        if (_uiState.value.isLoadingMore || _uiState.value.isEndOfList) return
 
         viewModelScope.launch {
-            _state.update { it.copy(isLoadingMore = true) }
-            val nextPage = _state.value.currentPage + 1
+            _uiState.update { it.copy(isLoadingMore = true) }
+            val nextPage = _uiState.value.currentPage + 1
             updateVisibleFunds(page = nextPage)
         }
     }
 
     private fun updateVisibleFunds(page: Int) {
-        val start = 0
         val end = ((page + 1) * PAGE_SIZE).coerceAtMost(allFunds.size)
+        val slice = allFunds.subList(0, end)
         
-        if (allFunds.isEmpty()) return
-
-        val slice = allFunds.subList(start, end)
-        
-        _state.update { 
-            it.copy(
-                visibleFunds = slice,
-                currentPage = page,
-                isLoadingMore = false,
-                isEndOfList = end >= allFunds.size
-            )
-        }
+        _uiState.update { it.copy(
+            visibleFunds = slice,
+            currentPage = page,
+            isLoadingMore = false,
+            isEndOfList = end >= allFunds.size,
+            isLoading = false
+        )}
     }
 
     fun onItemVisible(fundId: Int) {

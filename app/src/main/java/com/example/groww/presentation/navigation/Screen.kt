@@ -1,27 +1,31 @@
 package com.example.groww.presentation.navigation
 
-import java.net.URLEncoder
-import java.nio.charset.StandardCharsets
+/**
+ * Navigation Architecture Constants
+ */
+object Graph {
+    const val ROOT = "root_graph"
+    const val EXPLORE = "explore_graph"
+    const val WATCHLIST = "watchlist_graph"
+}
 
 sealed class Screen(val route: String) {
-    object Explore : Screen("explore_base")
+    // Bottom Bar Screens
+    data object Explore : Screen("explore_home")
+    data object Watchlist : Screen("watchlist_home")
     
-    object ViewAll : Screen("view_all/{$ARG_CATEGORY}") {
-        fun createRoute(category: String): String {
-            val encoded = URLEncoder.encode(category, StandardCharsets.UTF_8.toString())
-            return "view_all/$encoded"
-        }
+    // Feature Screens
+    data object Search : Screen("search_screen")
+    
+    data object ViewAll : Screen("view_all/{category}") {
+        fun createRoute(category: String) = "view_all/$category"
     }
     
-    object Details : Screen("details/{$ARG_FUND_ID}") {
+    data object Details : Screen("details/{fundId}") {
         fun createRoute(fundId: Int) = "details/$fundId"
     }
     
-    object Search : Screen("search_base")
-    
-    object Watchlist : Screen("watchlist_base")
-    
-    object WatchlistDetail : Screen("watchlist_detail/{$ARG_WATCHLIST_ID}") {
+    data object WatchlistDetail : Screen("watchlist_detail/{watchlistId}") {
         fun createRoute(watchlistId: Long) = "watchlist_detail/$watchlistId"
     }
 
@@ -31,7 +35,3 @@ sealed class Screen(val route: String) {
         const val ARG_CATEGORY = "category"
     }
 }
-
-const val ROOT_GRAPH_ROUTE = "root"
-const val EXPLORE_GRAPH_ROUTE = "explore_graph"
-const val WATCHLIST_GRAPH_ROUTE = "watchlist_graph"

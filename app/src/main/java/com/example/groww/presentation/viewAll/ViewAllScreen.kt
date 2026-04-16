@@ -17,7 +17,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.groww.domain.model.Fund
-import com.example.groww.ui.theme.BackgroundLight
+import com.example.groww.presentation.common.*
 import com.example.groww.ui.theme.PrimaryGreen
 import com.example.groww.util.shimmerEffect
 
@@ -29,7 +29,7 @@ fun ViewAllScreen(
     onBackClick: () -> Unit,
     onFundClick: (Int) -> Unit
 ) {
-    val uiState by viewModel.state.collectAsState()
+    val uiState by viewModel.uiState.collectAsState()
     val listState = rememberLazyListState()
 
     LaunchedEffect(listState) {
@@ -47,57 +47,27 @@ fun ViewAllScreen(
             TopAppBar(
                 title = { Text(category, fontWeight = FontWeight.Bold) },
                 navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                    titleContentColor = MaterialTheme.colorScheme.onSurface
-                )
+                    IconButton(onClick = onBackClick) { Icon(Icons.Default.ArrowBack, contentDescription = "Back") }
+                }
             )
         }
     ) { padding ->
         Box(modifier = Modifier.padding(padding).fillMaxSize()) {
-            LazyColumn(
-                state = listState,
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                if (uiState.visibleFunds.isEmpty() && uiState.isLoadingMore) {
-                    items(10) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(80.dp)
-                                .shimmerEffect()
-                                .clip(RoundedCornerShape(12.dp))
-                        )
-                    }
-                } else {
-                    items(uiState.visibleFunds, key = { it.id }) { fund ->
-                        AnimatedVisibility(
-                            visible = true,
-                            enter = fadeIn() + slideInVertically { it / 2 }
-                        ) {
-                            ViewAllFundItem(
-                                fund = fund,
-                                onAppear = { viewModel.onItemVisible(fund.id) },
-                                onClick = { onFundClick(fund.id) }
-                            )
-                        }
-                    }
+            if (uiState.isLoading && uiState.visibleFunds.isEmpty()) {
+                LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    items(10) { Box(modifier = Modifier.fillMaxWidth().height(80.dp).shimmerEffect().clip(RoundedCornerShape(12.dp))) }
                 }
-
-                if (uiState.isLoadingMore && uiState.visibleFunds.isNotEmpty()) {
-                    item {
-                        LinearProgressIndicator(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            color = PrimaryGreen
-                        )
+            } else if (uiState.error != null && uiState.visibleFunds.isEmpty()) {
+                ErrorState(message = uiState.error!!, onRetry = { viewModel.refreshData() })
+            } else if (uiState.visibleFunds.isEmpty()) {
+                EmptyState(title = "No funds found", description = "Try a different category.", actionText = "Go Back", onAction = onBackClick)
+            } else {
+                LazyColumn(state = listState, modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    items(uiState.visibleFunds, key = { it.id }) { fund ->
+                        ViewAllFundItem(fund = fund, onAppear = { viewModel.onItemVisible(fund.id) }, onClick = { onFundClick(fund.id) })
+                    }
+                    if (uiState.isLoadingMore) {
+                        item { LinearProgressIndicator(modifier = Modifier.fillMaxWidth().padding(16.dp), color = PrimaryGreen) }
                     }
                 }
             }
@@ -106,17 +76,8 @@ fun ViewAllScreen(
 }
 
 @Composable
-fun ViewAllFundItem(
-    fund: Fund,
-    onAppear: () -> Unit,
-    onClick: () -> Unit
-) {
-    LaunchedEffect(fund.id) {
-        if (fund.latestNav == null) {
-            onAppear()
-        }
-    }
-
+fun ViewAllFundItem(fund: Fund, onAppear: () -> Unit, onClick: () -> Unit) {
+    LaunchedEffect(fund.id) { if (fund.latestNav == null) onAppear() }
     Surface(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
@@ -124,38 +85,15 @@ fun ViewAllFundItem(
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
     ) {
-        Row(
-            modifier = Modifier.padding(16.dp).fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        Row(modifier = Modifier.padding(16.dp).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = fund.name,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 2,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = fund.category,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Text(text = fund.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 2)
+                Text(text = fund.category, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Spacer(modifier = Modifier.width(16.dp))
             Column(horizontalAlignment = Alignment.End) {
-                Text(
-                    text = fund.latestNav?.toDoubleOrNull()?.let { "₹%.2f".format(it) } ?: "---",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = PrimaryGreen,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "NAV", 
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Text(text = fund.latestNav?.toDoubleOrNull()?.let { "₹%.2f".format(it) } ?: "---", style = MaterialTheme.typography.bodyLarge, color = PrimaryGreen, fontWeight = FontWeight.Bold)
+                Text(text = "NAV", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }

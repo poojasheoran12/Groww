@@ -1,8 +1,6 @@
 package com.example.groww.presentation.watchlist
 
 import androidx.compose.animation.*
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -15,16 +13,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.example.groww.R
 import com.example.groww.domain.model.Watchlist
-import com.example.groww.ui.theme.BackgroundLight
+import com.example.groww.presentation.common.EmptyState
+import com.example.groww.presentation.common.LoadingState
 import com.example.groww.ui.theme.PrimaryGreen
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -33,23 +27,18 @@ fun WatchlistScreen(
     viewModel: WatchlistViewModel,
     onWatchlistClick: (Long) -> Unit
 ) {
-    val watchlists by viewModel.watchlists.collectAsState()
-    var showAddDialog by remember { mutableStateOf(false) }
-    var watchlistName by remember { mutableStateOf("") }
+    val uiState by viewModel.uiState.collectAsState()
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                title = { Text("My Portfolios", fontWeight = FontWeight.Bold) },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                )
+                title = { Text("My Portfolios", fontWeight = FontWeight.Bold) }
             )
         },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { showAddDialog = true },
+                onClick = { viewModel.onAddClick() },
                 containerColor = PrimaryGreen,
                 contentColor = Color.White
             ) {
@@ -58,58 +47,52 @@ fun WatchlistScreen(
         }
     ) { padding ->
         Box(modifier = Modifier.padding(padding).fillMaxSize()) {
-            Crossfade(targetState = watchlists.isEmpty()) { isEmpty ->
-                if (isEmpty) {
-                    EmptyWatchlistState(modifier = Modifier.align(Alignment.Center))
-                } else {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        items(watchlists, key = { it.id }) { watchlist ->
-                            AnimatedVisibility(
-                                visible = true,
-                                enter = fadeIn() + slideInHorizontally()
-                            ) {
-                                WatchlistItem(
-                                    watchlist = watchlist,
-                                    onClick = { onWatchlistClick(watchlist.id) },
-                                    onDelete = { viewModel.deleteWatchlist(watchlist.id) }
-                                )
-                            }
-                        }
+            if (uiState.isLoading) {
+                LoadingState()
+            } else if (uiState.watchlists.isEmpty()) {
+                EmptyState(
+                    title = "No portfolios yet",
+                    description = "Create custom portfolios to track your favorite mutual funds separately.",
+                    actionText = "Create Now",
+                    onAction = { viewModel.onAddClick() }
+                )
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    items(uiState.watchlists, key = { it.id }) { watchlist ->
+                        WatchlistItem(
+                            watchlist = watchlist,
+                            onClick = { onWatchlistClick(watchlist.id) },
+                            onDelete = { viewModel.deleteWatchlist(watchlist.id) }
+                        )
                     }
                 }
             }
         }
 
-        if (showAddDialog) {
+        if (uiState.showAddDialog) {
             AlertDialog(
-                onDismissRequest = { showAddDialog = false },
+                onDismissRequest = { viewModel.onDismissDialog() },
                 title = { Text("New Portfolio") },
                 text = {
                     TextField(
-                        value = watchlistName,
-                        onValueChange = { watchlistName = it },
+                        value = uiState.newWatchlistName,
+                        onValueChange = { viewModel.onNameChange(it) },
                         placeholder = { Text("e.g. Retirement") },
                         modifier = Modifier.fillMaxWidth()
                     )
                 },
                 confirmButton = {
-                    TextButton(onClick = {
-                        if (watchlistName.isNotBlank()) {
-                            viewModel.createWatchlist(watchlistName)
-                            watchlistName = ""
-                            showAddDialog = false
-                        }
-                    }) {
+                    TextButton(onClick = { viewModel.createWatchlist() }) {
                         Text("Add", color = PrimaryGreen, fontWeight = FontWeight.Bold)
                     }
                 },
                 dismissButton = {
-                    TextButton(onClick = { showAddDialog = false }) {
-                        Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    TextButton(onClick = { viewModel.onDismissDialog() }) {
+                        Text("Cancel")
                     }
                 }
             )
@@ -139,8 +122,7 @@ fun WatchlistItem(
                 Text(
                     text = watchlist.name,
                     style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
+                    fontWeight = FontWeight.Bold
                 )
                 Text(
                     text = "${watchlist.funds.size} funds",
@@ -148,7 +130,7 @@ fun WatchlistItem(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row {
                 IconButton(onClick = onDelete) {
                     Icon(
                         Icons.Default.Delete,
@@ -163,35 +145,5 @@ fun WatchlistItem(
                 )
             }
         }
-    }
-}
-
-@Composable
-fun EmptyWatchlistState(modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier.padding(32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Image(
-            painter = painterResource(id = R.drawable.empty_state),
-            contentDescription = null,
-            modifier = Modifier.size(280.dp),
-            contentScale = ContentScale.Fit
-        )
-        Spacer(modifier = Modifier.height(24.dp))
-        Text(
-            text = "No portfolios yet",
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onBackground
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = "Create custom portfolios to track your favorite mutual funds separately.",
-            style = MaterialTheme.typography.bodyMedium,
-            textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
     }
 }

@@ -60,11 +60,7 @@ class FundRepositoryImpl @Inject constructor(
     }
 
     override suspend fun syncCategoryFunds(category: FundCategory) {
-        val networkResults = try {
-            api.searchFunds(getApiQuery(category))
-        } catch (e: Exception) {
-            emptyList()
-        }
+        val networkResults = api.searchFunds(getApiQuery(category))
 
         if (networkResults.isNotEmpty()) {
             val entities = networkResults.map { searchResult ->
@@ -101,13 +97,11 @@ class FundRepositoryImpl @Inject constructor(
             return
         }
 
-        try {
-            val response = api.getFundDetails(id)
-            val latestNav = response.data.firstOrNull()?.nav
-            if (latestNav != null) {
-                dao.updateNavAndTimestamp(id, latestNav, System.currentTimeMillis())
-            }
-        } catch (e: Exception) { }
+        val response = api.getFundDetails(id)
+        val latestNav = response.data.firstOrNull()?.nav
+        if (latestNav != null) {
+            dao.updateNavAndTimestamp(id, latestNav, System.currentTimeMillis())
+        }
     }
 
     override suspend fun getFundDetails(id: Int, forceRefresh: Boolean): FundDetails {
@@ -134,34 +128,29 @@ class FundRepositoryImpl @Inject constructor(
         val localFunds = localEntities.map { it.toDomain() }
         emit(localFunds)
 
-        try {
-            val networkResults = api.searchFunds(query)
-            val ids = networkResults.map { it.schemeCode }
-            
-            val entities = networkResults.map { searchResult ->
-                val existing = dao.getFundById(searchResult.schemeCode)
-                searchResult.toEntity(FundCategory.SEARCH.displayName).copy(
-                    latestNav = existing?.latestNav,
-                    lastUpdated = existing?.lastUpdated ?: 0L
-                )
+        val networkResults = api.searchFunds(query)
+        val ids = networkResults.map { searchResult.schemeCode }
+        
+        val entities = networkResults.map { searchResult ->
+            val existing = dao.getFundById(searchResult.schemeCode)
+            searchResult.toEntity(FundCategory.SEARCH.displayName).copy(
+                latestNav = existing?.latestNav,
+                lastUpdated = existing?.lastUpdated ?: 0L
+            )
+        }
+        dao.upsertFunds(entities)
+
+        coroutineScope {
+            ids.take(5).forEach { id ->
+                launch { lazyFetchNav(id) }
             }
-            dao.upsertFunds(entities)
+        }
 
-
-            coroutineScope {
-                ids.take(5).forEach { id ->
-                    launch { lazyFetchNav(id) }
-                }
+        dao.getFundsByIdsFlow(ids).collect { updatedEntities ->
+            val sortedResults = ids.mapNotNull { id ->
+                updatedEntities.find { it.id == id }?.toDomain()
             }
-
-
-            dao.getFundsByIdsFlow(ids).collect { updatedEntities ->
-                val sortedResults = ids.mapNotNull { id ->
-                    updatedEntities.find { it.id == id }?.toDomain()
-                }
-                emit(sortedResults)
-            }
-        } catch (e: Exception) {
+            emit(sortedResults)
         }
     }
 
