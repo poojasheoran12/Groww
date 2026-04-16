@@ -24,13 +24,6 @@ class FundRepositoryImpl @Inject constructor(
 
     private companion object {
         const val CACHE_EXPIRY_MS = 24 * 60 * 60 * 1000L
-        const val MAX_MEMORY_CACHE_SIZE = 50
-    }
-
-    private val memoryCache = object : LinkedHashMap<Int, FundDetails>(MAX_MEMORY_CACHE_SIZE, 0.75f, true) {
-        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Int, FundDetails>?): Boolean {
-            return size > MAX_MEMORY_CACHE_SIZE
-        }
     }
 
     override fun getExploreFundsFlow(): Flow<Map<FundCategory, List<Fund>>> {
@@ -45,12 +38,13 @@ class FundRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun syncExploreFunds(): Unit = coroutineScope {
-        val categories = FundCategory.entries.filter { it != FundCategory.SEARCH && it != FundCategory.ALL }
-        
-        categories.map { category ->
-            async { syncCategoryFunds(category) }
-        }.awaitAll()
+    override suspend fun syncExploreFunds(): Result<Unit> = runCatching {
+        coroutineScope {
+            val categories = FundCategory.entries.filter { it != FundCategory.SEARCH && it != FundCategory.ALL }
+            categories.map { category ->
+                async { syncCategoryFunds(category).getOrThrow() }
+            }.awaitAll()
+        }
     }
 
     override fun getFundsByCategory(category: FundCategory): Flow<List<Fund>> {
@@ -59,17 +53,16 @@ class FundRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun syncCategoryFunds(category: FundCategory) {
+    override suspend fun syncCategoryFunds(category: FundCategory): Result<Unit> = runCatching {
         val networkResults = api.searchFunds(getApiQuery(category))
 
         if (networkResults.isNotEmpty()) {
             val entities = networkResults.map { searchResult ->
                 val existingInRoom = dao.getFundById(searchResult.schemeCode)
-                val existingInCache = synchronized(memoryCache) { memoryCache[searchResult.schemeCode] }
                 
                 searchResult.toEntity(category.displayName).copy(
-                    latestNav = existingInCache?.latestNav ?: existingInRoom?.latestNav,
-                    lastUpdated = if (existingInCache != null || existingInRoom != null) {
+                    latestNav = existingInRoom?.latestNav,
+                    lastUpdated = if (existingInRoom != null) {
                         System.currentTimeMillis()
                     } else {
                         System.currentTimeMillis()
@@ -78,24 +71,17 @@ class FundRepositoryImpl @Inject constructor(
             }
             dao.upsertFunds(entities)
 
-
             coroutineScope {
                 networkResults.take(4).map { fund ->
-                    async { lazyFetchNav(fund.schemeCode) }
+                    async { lazyFetchNav(fund.schemeCode).getOrThrow() }
                 }.awaitAll()
             }
         }
     }
 
-    override suspend fun lazyFetchNav(id: Int) {
+    override suspend fun lazyFetchNav(id: Int): Result<Unit> = runCatching {
         val existing = dao.getFundById(id)
-        if (existing?.latestNav != null && !isExpired(existing.lastUpdated)) return
-
-        val memoryNav = synchronized(memoryCache) { memoryCache[id]?.latestNav }
-        if (memoryNav != null) {
-            dao.updateNavAndTimestamp(id, memoryNav, System.currentTimeMillis())
-            return
-        }
+        if (existing?.latestNav != null && !isExpired(existing.lastUpdated)) return@runCatching
 
         val response = api.getFundDetails(id)
         val latestNav = response.data.firstOrNull()?.nav
@@ -104,23 +90,13 @@ class FundRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun getFundDetails(id: Int, forceRefresh: Boolean): FundDetails {
-        if (!forceRefresh) {
-            synchronized(memoryCache) {
-                memoryCache[id]?.let { return it }
-            }
-        }
-
+    override suspend fun getFundDetails(id: Int, forceRefresh: Boolean): Result<FundDetails> = runCatching {
         val detailsDto = api.getFundDetails(id)
         val domainDetails = detailsDto.toDomain()
 
-        synchronized(memoryCache) {
-            memoryCache[id] = domainDetails
-        }
+        dao.updateNavAndTimestamp(id, domainDetails.latestNav, System.currentTimeMillis())
 
-        dao.upsertFunds(listOf(domainDetails.toEntity()))
-
-        return domainDetails
+        domainDetails
     }
 
     override fun searchFunds(query: String): Flow<List<Fund>> = flow {
@@ -141,9 +117,10 @@ class FundRepositoryImpl @Inject constructor(
         dao.upsertFunds(entities)
 
         coroutineScope {
-            ids.take(5).forEach { id ->
-                launch { lazyFetchNav(id) }
+            val syncJobs = ids.take(5).map { id ->
+                async { lazyFetchNav(id) }
             }
+            syncJobs.awaitAll()
         }
 
         dao.getFundsByIdsFlow(ids).collect { updatedEntities ->

@@ -1,6 +1,7 @@
 package com.example.groww.presentation.watchlistDetail
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -89,16 +90,24 @@ fun EmptyFolderState(onExploreClick: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(32.dp),
+            .padding(32.dp)
+            .padding(bottom = 64.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Icon(
-            imageVector = Icons.Default.AccountBox,
-            contentDescription = null,
-            modifier = Modifier.size(120.dp),
-            tint = PrimaryGreen.copy(alpha = 0.5f)
-        )
+        Box(
+            modifier = Modifier
+                .size(160.dp)
+                .background(PrimaryGreen.copy(alpha = 0.1f), androidx.compose.foundation.shape.CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.AccountBox,
+                contentDescription = null,
+                modifier = Modifier.size(80.dp),
+                tint = PrimaryGreen
+            )
+        }
         
         Spacer(modifier = Modifier.height(32.dp))
         
@@ -109,7 +118,7 @@ fun EmptyFolderState(onExploreClick: () -> Unit) {
             color = MaterialTheme.colorScheme.onBackground
         )
         
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(16.dp))
         
         Text(
             text = stringResource(R.string.explore_market_desc),
@@ -124,13 +133,14 @@ fun EmptyFolderState(onExploreClick: () -> Unit) {
         Button(
             onClick = onExploreClick,
             modifier = Modifier
-                .fillMaxWidth(0.7f)
+                .fillMaxWidth(0.8f)
                 .height(56.dp),
-            shape = MaterialTheme.shapes.medium,
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(28.dp),
             colors = ButtonDefaults.buttonColors(
                 containerColor = PrimaryGreen,
                 contentColor = Color.White
-            )
+            ),
+            elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
         ) {
             Text(
                 text = stringResource(R.string.explore_funds_btn),

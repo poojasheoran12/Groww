@@ -13,8 +13,8 @@ class GetExploreFundsUseCase @Inject constructor(
         return repository.getExploreFundsFlow()
     }
 
-    suspend fun sync() {
-        repository.syncExploreFunds()
+    suspend fun sync(): Result<Unit> {
+        return repository.syncExploreFunds()
     }
 
     suspend fun cleanup() {

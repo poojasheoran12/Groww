@@ -13,10 +13,25 @@
     <string name="explore_market_desc">Explore the market and save funds into this portfolio.</string>
     <string name="explore_funds_btn">Explore Funds</string>
     
+    <!-- Details -->
+    <string name="fund_details_title">Fund Details</string>
+    <string name="fund_info_section">Fund Information</string>
+    <string name="scheme_code_label">Scheme Code</string>
+    <string name="category_label">Category</string>
+    <string name="bookmark_desc">Bookmark</string>
+
     <!-- Errors & Common -->
     <string name="retry">Retry</string>
     <string name="loading">Loading...</string>
     <string name="something_went_wrong">Something went wrong</string>
     <string name="back">Back</string>
     <string name="nav_label">NAV</string>
+
+    <!-- Bookmark Sheet -->
+    <string name="save_to_portfolio_title">Save to Portfolio</string>
+    <string name="create_new_portfolio_hint">Create new portfolio...</string>
+    <string name="create_btn_desc">Create</string>
+    <string name="no_existing_portfolios">No existing portfolios</string>
+    <string name="funds_count">%1$d funds</string>
+    <string name="done">Done</string>
 </resources>

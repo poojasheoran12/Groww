@@ -7,7 +7,7 @@ import javax.inject.Inject
 class GetFundDetailsUseCase @Inject constructor(
     private val repository: FundRepository
 ) {
-    suspend operator fun invoke(id: Int, forceRefresh: Boolean = false): FundDetails {
+    suspend operator fun invoke(id: Int, forceRefresh: Boolean = false): Result<FundDetails> {
         return repository.getFundDetails(id, forceRefresh)
     }
 }

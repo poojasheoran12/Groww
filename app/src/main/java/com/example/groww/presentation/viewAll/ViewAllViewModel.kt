@@ -10,6 +10,7 @@ import com.example.groww.domain.usecase.GetNavUseCase
 import com.example.groww.domain.usecase.SyncCategoryUseCase
 import com.example.groww.presentation.navigation.Screen
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -23,13 +24,16 @@ class ViewAllViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val PAGE_SIZE = 20
-    private val categoryName: String = savedStateHandle[Screen.ARG_CATEGORY] ?: FundCategory.ALL.name
-    private val category = try { FundCategory.valueOf(categoryName) } catch (e: Exception) { FundCategory.ALL }
+    private val initialCategoryName: String = savedStateHandle[Screen.ARG_CATEGORY] ?: FundCategory.ALL.displayName
+    
+    private val _currentCategory = MutableStateFlow(FundCategory.fromDisplayName(initialCategoryName))
+    val currentCategory: StateFlow<FundCategory> = _currentCategory.asStateFlow()
 
     private val _uiState = MutableStateFlow(ViewAllUiState())
     val uiState: StateFlow<ViewAllUiState> = _uiState.asStateFlow()
 
     private var allFunds: List<Fund> = emptyList()
+    private var observeJob: Job? = null
 
     init {
         observeFunds()
@@ -37,7 +41,8 @@ class ViewAllViewModel @Inject constructor(
     }
 
     private fun observeFunds() {
-        getFundsByCategoryUseCase(category)
+        observeJob?.cancel()
+        observeJob = getFundsByCategoryUseCase(_currentCategory.value)
             .onEach { funds ->
                 allFunds = funds
                 if (funds.isNotEmpty()) {
@@ -49,18 +54,28 @@ class ViewAllViewModel @Inject constructor(
             .launchIn(viewModelScope)
     }
 
+    fun selectCategory(category: FundCategory) {
+        if (_currentCategory.value == category) return
+        _currentCategory.value = category
+        _uiState.update { it.copy(isLoading = true, visibleFunds = emptyList(), currentPage = 0, isEndOfList = false) }
+        observeFunds()
+        refreshData()
+    }
+
     fun refreshData() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = allFunds.isEmpty(), error = null) }
-            try {
-                syncCategoryUseCase(category)
-            } catch (e: Exception) {
-                if (allFunds.isEmpty()) {
-                    _uiState.update { it.copy(error = e.message ?: "Failed to load funds", isLoading = false) }
+            syncCategoryUseCase(_currentCategory.value)
+                .onSuccess {
+                    _uiState.update { it.copy(isLoading = false) }
                 }
-            } finally {
-                _uiState.update { it.copy(isLoading = false) }
-            }
+                .onFailure { e ->
+                    if (allFunds.isEmpty()) {
+                        _uiState.update { it.copy(error = e.message ?: "Failed to load funds", isLoading = false) }
+                    } else {
+                        _uiState.update { it.copy(isLoading = false) }
+                    }
+                }
         }
     }
 

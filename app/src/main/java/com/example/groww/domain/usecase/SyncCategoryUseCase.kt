@@ -7,7 +7,7 @@ import javax.inject.Inject
 class SyncCategoryUseCase @Inject constructor(
     private val repository: FundRepository
 ) {
-    suspend operator fun invoke(category: FundCategory) {
-        repository.syncCategoryFunds(category)
+    suspend operator fun invoke(category: FundCategory): Result<Unit> {
+        return repository.syncCategoryFunds(category)
     }
 }

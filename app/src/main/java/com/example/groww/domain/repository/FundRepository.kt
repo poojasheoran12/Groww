@@ -7,11 +7,11 @@ import kotlinx.coroutines.flow.Flow
 
 interface FundRepository {
     fun getExploreFundsFlow(): Flow<Map<FundCategory, List<Fund>>>
-    suspend fun syncExploreFunds()
+    suspend fun syncExploreFunds(): Result<Unit>
     fun getFundsByCategory(category: FundCategory): Flow<List<Fund>>
-    suspend fun syncCategoryFunds(category: FundCategory)
-    suspend fun getFundDetails(id: Int, forceRefresh: Boolean = false): FundDetails
+    suspend fun syncCategoryFunds(category: FundCategory): Result<Unit>
+    suspend fun getFundDetails(id: Int, forceRefresh: Boolean = false): Result<FundDetails>
     fun searchFunds(query: String): Flow<List<Fund>>
     suspend fun cleanupExpiredData()
-    suspend fun lazyFetchNav(id: Int)
+    suspend fun lazyFetchNav(id: Int): Result<Unit>
 }

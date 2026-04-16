@@ -93,8 +93,9 @@ fun NavGraphBuilder.exploreNavGraph(navController: NavHostController) {
             arguments = listOf(navArgument(Screen.ARG_CATEGORY) { type = NavType.StringType })
         ) { entry ->
             val categoryName = entry.arguments?.getString(Screen.ARG_CATEGORY) ?: FundCategory.ALL.name
+            val category = try { FundCategory.valueOf(categoryName) } catch (e: Exception) { FundCategory.ALL }
             ViewAllScreen(
-                category = FundCategory.valueOf(categoryName).displayName,
+                category = category.displayName,
                 viewModel = hiltViewModel<ViewAllViewModel>(),
                 onBackClick = { navController.popBackStack() },
                 onFundClick = { id -> navController.navigate(Screen.Details.createRoute(id)) }
@@ -109,7 +110,10 @@ fun NavGraphBuilder.watchlistNavGraph(navController: NavHostController) {
         composable(Screen.Watchlist.route) {
             WatchlistScreen(
                 viewModel = hiltViewModel<WatchlistViewModel>(),
-                onWatchlistClick = { id -> navController.navigate(Screen.WatchlistDetail.createRoute(id)) }
+                onWatchlistClick = { id -> navController.navigate(Screen.WatchlistDetail.createRoute(id)) },
+                onExploreClick = { 
+                    navController.navigate(Screen.ViewAll.createRoute(FundCategory.ALL.name))
+                }
             )
         }
 
@@ -120,7 +124,9 @@ fun NavGraphBuilder.watchlistNavGraph(navController: NavHostController) {
             WatchlistDetailScreen(
                 onBackClick = { navController.popBackStack() },
                 onFundClick = { id -> navController.navigate(Screen.Details.createRoute(id)) },
-                onExploreClick = { navController.navigate(Screen.Explore.route) }
+                onExploreClick = { 
+                    navController.navigate(Screen.ViewAll.createRoute(FundCategory.ALL.name))
+                }
             )
         }
     }

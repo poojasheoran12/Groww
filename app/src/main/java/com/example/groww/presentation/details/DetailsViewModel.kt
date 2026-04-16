@@ -13,9 +13,11 @@ import javax.inject.Inject
 @HiltViewModel
 class DetailsViewModel @Inject constructor(
     private val getFundDetailsUseCase: GetFundDetailsUseCase,
-    private val isFundInWatchlistUseCase: IsFundInWatchlistUseCase,
+    private val getWatchlistsForFundUseCase: GetWatchlistsForFundUseCase,
     private val addFundToWatchlistUseCase: AddFundToWatchlistUseCase,
+    private val removeFundFromWatchlistUseCase: RemoveFundFromWatchlistUseCase,
     private val getAllWatchlistsUseCase: GetAllWatchlistsUseCase,
+    private val createWatchlistUseCase: CreateWatchlistUseCase,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -33,20 +35,19 @@ class DetailsViewModel @Inject constructor(
     private fun loadDetails() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
-            runCatching {
-                getFundDetailsUseCase(fundId)
-            }.onSuccess { details ->
-                _uiState.update { it.copy(details = details, isLoading = false) }
-            }.onFailure { error ->
-                _uiState.update { it.copy(error = error.message ?: "Failed to load details", isLoading = false) }
-            }
+            getFundDetailsUseCase(fundId)
+                .onSuccess { details ->
+                    _uiState.update { it.copy(details = details, isLoading = false) }
+                }.onFailure { error ->
+                    _uiState.update { it.copy(error = error.message ?: "Failed to load details", isLoading = false) }
+                }
         }
     }
 
     private fun observeWatchlistStatus() {
-        isFundInWatchlistUseCase(fundId)
-            .onEach { isBookmarked ->
-                _uiState.update { it.copy(isBookmarked = isBookmarked) }
+        getWatchlistsForFundUseCase(fundId)
+            .onEach { watchlistIds ->
+                _uiState.update { it.copy(fundWatchlistIds = watchlistIds) }
             }
             .launchIn(viewModelScope)
     }
@@ -67,10 +68,21 @@ class DetailsViewModel @Inject constructor(
         _uiState.update { it.copy(showWatchlistDialog = false) }
     }
 
-    fun addToWatchlist(watchlistId: Long) {
+    fun toggleWatchlist(watchlistId: Long) {
         viewModelScope.launch {
-            addFundToWatchlistUseCase(fundId, watchlistId)
-            onDismissDialog()
+            val isCurrentlySelected = _uiState.value.fundWatchlistIds.contains(watchlistId)
+            if (isCurrentlySelected) {
+                removeFundFromWatchlistUseCase(fundId, watchlistId)
+            } else {
+                addFundToWatchlistUseCase(fundId, watchlistId)
+            }
+        }
+    }
+
+    fun createNewWatchlist(name: String) {
+        viewModelScope.launch {
+            val id = createWatchlistUseCase(name)
+            addFundToWatchlistUseCase(fundId, id)
         }
     }
 

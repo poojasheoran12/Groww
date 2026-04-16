@@ -25,7 +25,8 @@ import com.example.groww.ui.theme.PrimaryGreen
 @Composable
 fun WatchlistScreen(
     viewModel: WatchlistViewModel,
-    onWatchlistClick: (Long) -> Unit
+    onWatchlistClick: (Long) -> Unit,
+    onExploreClick: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -53,8 +54,8 @@ fun WatchlistScreen(
                 EmptyState(
                     title = "No portfolios yet",
                     description = "Create custom portfolios to track your favorite mutual funds separately.",
-                    actionText = "Create Now",
-                    onAction = { viewModel.onAddClick() }
+                    actionText = "Explore Funds",
+                    onAction = onExploreClick
                 )
             } else {
                 LazyColumn(

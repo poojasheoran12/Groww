@@ -35,15 +35,16 @@ class ExploreViewModel @Inject constructor(
     fun refreshData() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
-            try {
-                getExploreFundsUseCase.cleanup()
-                getExploreFundsUseCase.sync()
-            } catch (e: Exception) {
-                _uiState.update { it.copy(
-                    error = e.message ?: "Unknown error occurred",
-                    isLoading = false
-                )}
-            }
+            getExploreFundsUseCase.sync()
+                .onSuccess {
+                    _uiState.update { it.copy(isLoading = false) }
+                }
+                .onFailure { e ->
+                    _uiState.update { it.copy(
+                        error = e.message ?: "Unknown error occurred",
+                        isLoading = false
+                    )}
+                }
         }
     }
 }

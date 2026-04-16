@@ -21,6 +21,8 @@ import com.example.groww.presentation.common.*
 import com.example.groww.ui.theme.PrimaryGreen
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -29,6 +31,7 @@ fun DetailsScreen(
     onBackClick: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val isBookmarked = uiState.fundWatchlistIds.isNotEmpty()
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -41,9 +44,9 @@ fun DetailsScreen(
                 actions = {
                     IconButton(onClick = { viewModel.onBookmarkClick() }) {
                         Icon(
-                            imageVector = if (uiState.isBookmarked) Icons.Filled.Star else Icons.Outlined.Star,
+                            imageVector = if (isBookmarked) Icons.Filled.Star else Icons.Outlined.Star,
                             contentDescription = "Bookmark",
-                            tint = if (uiState.isBookmarked) PrimaryGreen else MaterialTheme.colorScheme.onSurfaceVariant
+                            tint = if (isBookmarked) PrimaryGreen else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -69,9 +72,11 @@ fun DetailsScreen(
         }
 
         if (uiState.showWatchlistDialog) {
-            WatchlistSelectionDialog(
+            WatchlistSelectionSheet(
                 watchlists = uiState.availableWatchlists,
-                onWatchlistSelected = { viewModel.addToWatchlist(it) },
+                selectedIds = uiState.fundWatchlistIds,
+                onToggleWatchlist = { viewModel.toggleWatchlist(it) },
+                onCreateNew = { viewModel.createNewWatchlist(it) },
                 onDismiss = { viewModel.onDismissDialog() }
             )
         }
@@ -104,7 +109,7 @@ fun StatsSection(fund: FundDetails) {
             Text(text = "Fund Information", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(16.dp))
             StatRow("Category", fund.category)
-            Divider(modifier = Modifier.padding(vertical = 12.dp), color = MaterialTheme.colorScheme.outlineVariant)
+            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = MaterialTheme.colorScheme.outlineVariant)
             StatRow("Scheme Code", fund.id.toString())
         }
     }
@@ -118,31 +123,123 @@ fun StatRow(label: String, value: String) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun WatchlistSelectionDialog(
+fun WatchlistSelectionSheet(
     watchlists: List<com.example.groww.domain.model.Watchlist>,
-    onWatchlistSelected: (Long) -> Unit,
+    selectedIds: List<Long>,
+    onToggleWatchlist: (Long) -> Unit,
+    onCreateNew: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
-    AlertDialog(
+    var newWatchlistName by remember { mutableStateOf("") }
+    val sheetState = rememberModalBottomSheetState()
+
+    ModalBottomSheet(
         onDismissRequest = onDismiss,
-        title = { Text("Add to Portfolio") },
-        text = {
-            if (watchlists.isEmpty()) {
-                Text("No portfolios found. Please create one in the Watchlist tab.")
-            } else {
-                LazyColumn {
+        sheetState = sheetState,
+        dragHandle = { BottomSheetDefaults.DragHandle() },
+        containerColor = MaterialTheme.colorScheme.surface
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 48.dp)
+        ) {
+            Text(
+                text = "Save to Portfolio",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(vertical = 8.dp)
+            )
+
+            // New Portfolio Input field (Always visible)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                OutlinedTextField(
+                    value = newWatchlistName,
+                    onValueChange = { newWatchlistName = it },
+                    placeholder = { Text("Create new portfolio...") },
+                    modifier = Modifier.weight(1f),
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = PrimaryGreen,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
+                    )
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                IconButton(
+                    onClick = { 
+                        if (newWatchlistName.isNotBlank()) {
+                            onCreateNew(newWatchlistName)
+                            newWatchlistName = ""
+                        }
+                    },
+                    enabled = newWatchlistName.isNotBlank(),
+                    colors = IconButtonDefaults.iconButtonColors(
+                        containerColor = if (newWatchlistName.isNotBlank()) PrimaryGreen else MaterialTheme.colorScheme.surfaceVariant,
+                        contentColor = Color.White
+                    ),
+                    modifier = Modifier.size(52.dp)
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "Create")
+                }
+            }
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp), color = MaterialTheme.colorScheme.outlineVariant)
+
+            // Existing Portfolios List
+            LazyColumn(
+                modifier = Modifier.heightIn(max = 400.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                if (watchlists.isEmpty()) {
+                    item {
+                        Text(
+                            text = "No existing portfolios",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(vertical = 16.dp)
+                        )
+                    }
+                } else {
                     items(watchlists) { watchlist ->
+                        val isSelected = selectedIds.contains(watchlist.id)
                         ListItem(
-                            headlineContent = { Text(watchlist.name, fontWeight = FontWeight.Bold) },
-                            supportingContent = { Text("${watchlist.funds.size} funds") },
-                            modifier = Modifier.background(Color.Transparent).clickable { onWatchlistSelected(watchlist.id) }
+                            headlineContent = { Text(watchlist.name, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface) },
+                            supportingContent = { Text("${watchlist.funds.size} funds", color = MaterialTheme.colorScheme.onSurfaceVariant) },
+                            trailingContent = {
+                                Checkbox(
+                                    checked = isSelected,
+                                    onCheckedChange = { onToggleWatchlist(watchlist.id) },
+                                    colors = CheckboxDefaults.colors(checkedColor = PrimaryGreen)
+                                )
+                            },
+                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onToggleWatchlist(watchlist.id) }
                         )
                     }
                 }
             }
-        },
-        confirmButton = {},
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
-    )
+            
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            Button(
+                onClick = onDismiss,
+                modifier = Modifier.fillMaxWidth().height(56.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen)
+            ) {
+                Text("Done", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+            }
+        }
+    }
 }
