@@ -36,7 +36,7 @@ class WatchlistRepositoryImpl @Inject constructor(
     }
 
     override suspend fun addFundToWatchlist(fundId: Int, watchlistId: Long) {
-        // Business Logic: Check for duplicates before adding to DB
+       
         val alreadyExists = dao.isFundAlreadyInWatchlist(watchlistId, fundId)
         if (!alreadyExists) {
             dao.insertFundToWatchlist(WatchlistFundCrossRef(watchlistId, fundId))
