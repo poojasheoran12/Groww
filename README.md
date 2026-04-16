@@ -1,6 +1,6 @@
 # Groww Mutual Funds Clone 🚀
 
-[![Download APK](https://drive.google.com/file/d/1-K-XIs-cpvDYgiPJ1J4lDCrC0Sz52yKS/view?usp=drivesdk)
+[![Download APK](https://img.shields.io/badge/Download-APK-green?style=for-the-badge&logo=android)](https://drive.google.com/uc?export=download&id=1-K-XIs-cpvDYgiPJ1J4lDCrC0Sz52yKS)
 [![Watch Demo](https://img.shields.io/badge/Watch-Demo-red?style=for-the-badge&logo=youtube)](https://drive.google.com/file/d/114xh3NkCF4AOl6ziML6U_oQeEGjpz3Zb/view?usp=drivesdk)
 
 A high-performance Mutual Funds tracking application built with **Clean Architecture**, **Jetpack Compose**, and **Offline-First** principles. This project is a technical demonstration of modern Android development, focusing on extreme performance, real-time data reactivity, and a premium visual experience.
